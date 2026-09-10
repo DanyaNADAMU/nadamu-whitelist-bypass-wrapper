@@ -341,7 +341,8 @@ async def cmd_restart(message: Message):
             await message.answer(get_text("access_denied", lang, user_id=message.from_user.id), parse_mode="HTML")
         return
 
-    res = client.execute_command("restart", user=username)
+    loop = asyncio.get_running_loop()
+    res = await loop.run_in_executor(None, lambda: client.execute_command("restart", user=username))
     if res.success:
         await message.answer(f"🔄 Служба туннеля для <b>{username}</b> успешно перезапущена!", parse_mode="HTML")
     else:
@@ -362,7 +363,8 @@ async def cmd_start_service(message: Message):
         await message.answer("ℹ️ Использование: <code>/start_service &lt;user&gt;</code>", parse_mode="HTML")
         return
 
-    res = client.execute_command("start", user=username)
+    loop = asyncio.get_running_loop()
+    res = await loop.run_in_executor(None, lambda: client.execute_command("start", user=username))
     if res.success:
         await message.answer(f"▶️ Служба для <b>{username}</b> успешно запущена!", parse_mode="HTML")
     else:
@@ -383,7 +385,8 @@ async def cmd_stop_service(message: Message):
         await message.answer("ℹ️ Использование: <code>/stop_service &lt;user&gt;</code>", parse_mode="HTML")
         return
 
-    res = client.execute_command("stop", user=username)
+    loop = asyncio.get_running_loop()
+    res = await loop.run_in_executor(None, lambda: client.execute_command("stop", user=username))
     if res.success:
         await message.answer(f"⏹️ Служба для <b>{username}</b> остановлена!", parse_mode="HTML")
     else:

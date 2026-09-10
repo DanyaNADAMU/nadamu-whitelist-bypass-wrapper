@@ -84,11 +84,12 @@ class CoreClient:
                     username=u.get("username", username),
                     provider=u.get("provider", "telemost"),
                     service_status=u.get("service_status", "unknown"),
+                    link=u.get("link"),
                     cookie_valid=u.get("cookie_valid", False),
                     cookie_file=u.get("cookie_file"),
                     cookie_size=u.get("cookie_size", 0),
-                    link=u.get("link"),
-                    room_env_exists=u.get("room_env_exists", False),
+                    telegram_id=u.get("telegram_id"),
+                    vk_id=u.get("vk_id"),
                 )
 
         status = self.tunnel_service.get_status(username)

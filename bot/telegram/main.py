@@ -61,34 +61,27 @@ async def register_bot_commands(bot: Bot) -> None:
         BotCommand(command="stop_service", description="[Admin] Stop user service"),
     ]
 
-    # 1. Default scopes
+    # 1. Default and AllPrivateChats scopes
     try:
-        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeDefault(), language_code="ru")
-        await bot.set_my_commands(user_commands_en, scope=BotCommandScopeDefault(), language_code="en")
-        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeDefault())
+        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeDefault(), request_timeout=10.0)
     except Exception as e:
         logger.warning(f"Failed to set default bot commands: {e}")
 
-    # 2. All private chats scope (required by Telegram mobile and desktop for 1-to-1 chats)
     try:
-        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeAllPrivateChats(), language_code="ru")
-        await bot.set_my_commands(user_commands_en, scope=BotCommandScopeAllPrivateChats(), language_code="en")
-        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeAllPrivateChats())
+        await bot.set_my_commands(user_commands_ru, scope=BotCommandScopeAllPrivateChats(), request_timeout=10.0)
     except Exception as e:
         logger.warning(f"Failed to set private chat commands: {e}")
 
-    # 3. Admin chats scope
+    # 2. Admin chats scope
     for admin_id in bot_config.admin_ids:
         try:
-            await bot.set_my_commands(admin_commands_ru, scope=BotCommandScopeChat(chat_id=admin_id), language_code="ru")
-            await bot.set_my_commands(admin_commands_en, scope=BotCommandScopeChat(chat_id=admin_id), language_code="en")
-            await bot.set_my_commands(admin_commands_ru, scope=BotCommandScopeChat(chat_id=admin_id))
+            await bot.set_my_commands(admin_commands_ru, scope=BotCommandScopeChat(chat_id=admin_id), request_timeout=10.0)
         except Exception as e:
             logger.warning(f"Failed to set admin commands for chat {admin_id}: {e}")
 
-    # 4. Explicitly enable the Menu button in the chat input bar
+    # 3. Explicitly enable the Menu button in the chat input bar
     try:
-        await bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+        await bot.set_chat_menu_button(menu_button=MenuButtonCommands(), request_timeout=10.0)
     except Exception as e:
         logger.warning(f"Failed to set chat menu button: {e}")
 
@@ -102,17 +95,22 @@ async def main_async() -> None:
         )
         sys.exit(1)
 
+    from aiogram.client.session.aiohttp import AiohttpSession
+
+    session = AiohttpSession(timeout=45.0)
     bot = Bot(
         token=bot_config.bot_token,
+        session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()
     dp.include_router(router)
 
-    await register_bot_commands(bot)
+    # Register bot commands asynchronously in the background so polling starts immediately
+    asyncio.create_task(register_bot_commands(bot))
 
     logger.info("WhitelistBypass Telegram Bot is starting polling...")
-    await dp.start_polling(bot)
+    await dp.start_polling(bot, polling_timeout=20, handle_signals=True)
 
 
 def main() -> None:
