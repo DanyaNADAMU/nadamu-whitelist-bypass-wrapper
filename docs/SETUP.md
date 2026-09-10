@@ -43,7 +43,7 @@ chmod +x /opt/whitelist-bypass/bin/headless-*-creator
 
 ---
 
-## 3. Установка CLI-оркестратора и службы systemd
+## 3. Установка CLI-оркестратора, службы systemd и документации
 
 Скопируйте файлы из этого репозитория:
 
@@ -52,11 +52,19 @@ chmod +x /opt/whitelist-bypass/bin/headless-*-creator
 cp bin/whitelist-bypass /usr/local/bin/whitelist-bypass
 chmod +x /usr/local/bin/whitelist-bypass
 
-# 2. Установка шаблона службы systemd
+# 2. Установка автодополнения (Tab-completion) в Bash
+cp completions/whitelist-bypass /etc/bash_completion.d/whitelist-bypass
+
+# 3. Установка страницы руководства (man)
+mkdir -p /usr/share/man/man1
+cp man/whitelist-bypass.1 /usr/share/man/man1/whitelist-bypass.1
+mandb 2>/dev/null || true
+
+# 4. Установка шаблона службы systemd
 cp systemd/whitelist-bypass@.service /etc/systemd/system/whitelist-bypass@.service
 systemctl daemon-reload
 
-# 3. Настройка прав sudoers для непривилегированного пользователя
+# 5. Настройка прав sudoers для непривилегированного пользователя
 cp sudoers/whitelist-bypass /etc/sudoers.d/whitelist-bypass
 chmod 0440 /etc/sudoers.d/whitelist-bypass
 ```

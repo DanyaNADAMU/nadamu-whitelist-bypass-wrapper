@@ -1,0 +1,99 @@
+.TH WHITELIST-BYPASS 1 "September 2026" "whitelist-bypass" "User Commands"
+.SH NAME
+whitelist-bypass \- Multi-account orchestrator for WhitelistBypass headless creators
+.SH SYNOPSIS
+.B whitelist-bypass
+\fICOMMAND\fR [\fIUSER\fR]
+.SH DESCRIPTION
+.B whitelist-bypass
+is a multi-tenant orchestrator and lifecycle manager for the WhitelistBypass project.
+It encapsulates L4 network traffic (TCP/UDP) over WebRTC sessions (such as Yandex.Telemost,
+VK Calls, WB Stream, or DION) to circumvent network whitelisting and censorship.
+.PP
+Each user operates under a strict 1:1:1 model (1 User = 1 Service Account / Cookies = 1 Conference Room = 1 Isolated Creator Instance).
+Links are semi-persistent and maintained across regular service restarts.
+.SH COMMANDS
+.TP
+\fBget-link\fR, \fBlink\fR \fIUSER\fR
+Display the current conference URI, tunnel provider, and service status for the specified user.
+.TP
+\fBrotate\fR \fIUSER\fR
+Request a new clean conference room from the platform SFU. Stops the current instance, clears previous room tokens, launches a fresh daemon, captures the newly generated link using native \fB\-\-write\-file\fR, and saves it into \fBroom.env\fR.
+.TP
+\fBlist\fR
+Print a summary table of all configured users, their configured providers, current systemd service statuses, and active room links.
+.TP
+\fBstart\fR \fIUSER\fR
+Start the systemd unit \fBwhitelist-bypass@\fIUSER\fR.service.
+.TP
+\fBstop\fR \fIUSER\fR
+Stop the systemd unit \fBwhitelist-bypass@\fIUSER\fR.service.
+.TP
+\fBrestart\fR \fIUSER\fR
+Restart the systemd unit \fBwhitelist-bypass@\fIUSER\fR.service.
+.TP
+\fBstatus\fR \fIUSER\fR
+Display detailed systemd service status for \fBwhitelist-bypass@\fIUSER\fR.service.
+.TP
+\fBis-active\fR \fIUSER\fR
+Check whether the service is currently active (\fBactive\fR or \fBinactive\fR).
+.TP
+\fBrun\fR \fIUSER\fR
+Internal entrypoint executed by the systemd service template. Resolves user configuration, determines the target creator binary, assembles arguments, and replaces the shell process with the creator daemon.
+.TP
+\fBhelp\fR
+Display command usage summary.
+.SH CONFIGURATION
+Each user is configured in their own subdirectory under \fI/etc/whitelist-bypass/users/<username>/\fR:
+.TP
+\fBuser.conf\fR
+User-specific parameters in key=value format:
+.RS
+.IP \(bu 2
+\fBPROVIDER\fR: Target platform (\fBtelemost\fR, \fBvk\fR, \fBwbstream\fR, \fBdion\fR). Default is \fBtelemost\fR.
+.IP \(bu 2
+\fBRESOURCES\fR: Memory and GC profile (\fBdefault\fR, \fBmoderate\fR, \fBunlimited\fR). Default is \fBdefault\fR.
+.IP \(bu 2
+\fBUPSTREAM_SOCKS\fR: Optional upstream SOCKS5 proxy (e.g. \fB127.0.0.1:1080\fR) for routing unblocked egress traffic.
+.IP \(bu 2
+\fBDEBUG\fR: Enable verbose diagnostic logging (\fBtrue\fR or \fBfalse\fR).
+.RE
+.TP
+\fBcookies.json\fR
+Session cookies exported from the desktop browser for the user's account.
+.TP
+\fBroom.env\fR
+Environment file containing the active \fBCALL_LINK\fR. Managed automatically by the \fBrotate\fR command.
+.SH FILES
+.TP
+\fI/usr/local/bin/whitelist-bypass\fR
+The main orchestrator executable.
+.TP
+\fI/etc/whitelist-bypass/users/\fR
+Directory containing user configuration subdirectories.
+.TP
+\fI/opt/whitelist-bypass/bin/\fR
+Directory containing the headless creator binaries (\fBheadless-telemost-creator\fR, etc.).
+.TP
+\fI/etc/systemd/system/whitelist-bypass@.service\fR
+Template systemd service unit.
+.SH EXAMPLES
+.B Create or rotate room for user 'danya':
+.RS
+# whitelist-bypass rotate danya
+.RE
+.PP
+.B Check all configured users:
+.RS
+# whitelist-bypass list
+.RE
+.PP
+.B Retrieve current link:
+.RS
+# whitelist-bypass get-link danya
+.RE
+.SH SEE ALSO
+.BR systemctl (1),
+.BR journalctl (1)
+.SH AUTHOR
+nadamu-whitelist-bypass-wrapper contributors.
