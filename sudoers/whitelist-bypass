@@ -12,3 +12,5 @@ whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl status whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active whitelist-bypass@*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/journalctl -u whitelist-bypass@*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u whitelist-bypass@*

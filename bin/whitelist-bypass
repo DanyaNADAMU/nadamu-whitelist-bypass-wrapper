@@ -57,6 +57,23 @@ show_usage() {
 USAGE_EOF
 }
 
+
+run_systemctl() {
+    if [[ $EUID -eq 0 ]]; then
+        systemctl "$@"
+    else
+        sudo systemctl "$@"
+    fi
+}
+
+run_journalctl() {
+    if [[ $EUID -eq 0 ]]; then
+        journalctl "$@"
+    else
+        sudo journalctl "$@" 2>/dev/null || journalctl "$@"
+    fi
+}
+
 validate_user() {
     local username="$1"
     if [[ -z "$username" ]]; then
@@ -221,7 +238,7 @@ cmd_get_link() {
 
     local service_status="inactive"
     if command -v systemctl >/dev/null 2>&1; then
-        service_status=$(systemctl is-active "whitelist-bypass@$username" 2>/dev/null || echo "inactive")
+        service_status=$(run_systemctl is-active "whitelist-bypass@$username" 2>/dev/null || echo "inactive")
     fi
 
     local link=""
@@ -258,14 +275,14 @@ cmd_rotate() {
 
     if command -v systemctl >/dev/null 2>&1; then
         log_info "Остановка службы $service_name..."
-        systemctl stop "$service_name" 2>/dev/null || true
+        run_systemctl stop "$service_name" 2>/dev/null || true
     fi
 
     rm -f "$room_env" "$current_link_file"
 
     log_info "Запуск службы $service_name для генерации новой комнаты..."
     if command -v systemctl >/dev/null 2>&1; then
-        systemctl start "$service_name"
+        run_systemctl start "$service_name"
     else
         log_error "systemctl недоступен. Ротация требует работающего systemd."
         exit 1
@@ -284,10 +301,10 @@ cmd_rotate() {
             fi
         fi
 
-        if ! systemctl is-active "$service_name" >/dev/null 2>&1; then
+        if ! run_systemctl is-active "$service_name" >/dev/null 2>&1; then
             log_error "Служба $service_name аварийно завершилась во время создания комнаты!"
             if command -v journalctl >/dev/null 2>&1; then
-                journalctl -u "$service_name" -n 15 --no-pager >&2 || true
+                run_journalctl -u "$service_name" -n 15 --no-pager >&2 || true
             fi
             exit 1
         fi
@@ -299,7 +316,7 @@ cmd_rotate() {
     if [[ -z "$new_link" ]]; then
         log_error "Таймаут ($timeout сек) ожидания ссылки от медиа-сервера."
         if command -v journalctl >/dev/null 2>&1; then
-            journalctl -u "$service_name" -n 15 --no-pager >&2 || true
+            run_journalctl -u "$service_name" -n 15 --no-pager >&2 || true
         fi
         exit 1
     fi
@@ -339,7 +356,7 @@ cmd_list() {
 
             local status="inactive"
             if command -v systemctl >/dev/null 2>&1; then
-                status=$(systemctl is-active "whitelist-bypass@$uname" 2>/dev/null || echo "inactive")
+                status=$(run_systemctl is-active "whitelist-bypass@$uname" 2>/dev/null || echo "inactive")
             fi
 
             local link="—"
@@ -368,7 +385,7 @@ cmd_systemctl() {
     local service_name="whitelist-bypass@$username"
     case "$action" in
         start|stop|restart|status|is-active)
-            systemctl "$action" "$service_name"
+            run_systemctl "$action" "$service_name"
             ;;
         *)
             log_error "Неизвестное действие systemctl: $action"
@@ -419,7 +436,7 @@ main() {
                 log_error "Использование: whitelist-bypass $action <пользователь>"
                 exit 1
             fi
-            cmd_systemctl "$action" "$1"
+            cmd_run_systemctl "$action" "$1"
             ;;
         *)
             log_error "Неизвестная команда: '$action'"
