@@ -35,27 +35,27 @@ show_usage() {
     cat << "USAGE_EOF"
 WhitelistBypass Multi-Account Orchestrator
 
-Использование:
-  whitelist-bypass <команда> [параметры]
+Usage:
+  whitelist-bypass <command> [options]
 
-Команды управления комнатами и ссылками:
-  get-link, link <пользователь> [--qr] Показать текущую ссылку на комнату и статус
-  qr <пользователь>                   Показать QR-код и ссылку для подключения
-  rotate <пользователь> [--qr]         Создать новую чистую комнату и обновить ссылку
-  set-provider <пользователь> <провайдер> [--rotate]
-                                      Сменить провайдера (telemost, vk, wbstream, dion)
-  list                                Список всех пользователей и статусы их служб
+Room and Link Management:
+  get-link, link <user> [--qr]         Show active conference room link and status
+  qr <user>                            Display terminal QR code and link
+  rotate <user> [--qr]                 Rotate conference room and persist new link
+  set-provider <user> <provider> [--rotate]
+                                       Change provider (telemost, vk, wbstream, dion)
+  list                                 List all configured users and service statuses
 
-Управление службой systemd:
-  start <пользователь>            Запустить службу whitelist-bypass@<пользователь>
-  stop <пользователь>             Остановить службу
-  restart <пользователь>          Перезапустить службу
-  status <пользователь>           Показать статус systemd
-  is-active <пользователь>        Проверить активность службы (active/inactive)
+Systemd Service Control:
+  start <user>                         Start whitelist-bypass@<user> service
+  stop <user>                          Stop whitelist-bypass@<user> service
+  restart <user>                       Restart whitelist-bypass@<user> service
+  status <user>                        Show systemd service status
+  is-active <user>                     Check if service is active (active/inactive)
 
-Системные команды:
-  run <пользователь>              Внутренний запуск creator-демона (вызывается из systemd)
-  help                            Показать эту справку
+System Commands:
+  run <user>                           Internal daemon runner (called by systemd)
+  help                                 Show this help message
 
 USAGE_EOF
 }
@@ -67,8 +67,8 @@ render_qr() {
     fi
 
     if ! command -v qrencode >/dev/null 2>&1; then
-        log_warn "Утилита 'qrencode' не найдена в системе."
-        log_info "Для отображения QR-кодов установите пакет: sudo apt install -y qrencode"
+        log_warn "Utility 'qrencode' not found in system."
+        log_info "To enable in-terminal QR codes, install it via: sudo apt install -y qrencode"
         return 1
     fi
 
@@ -78,7 +78,7 @@ render_qr() {
     fi
 
     if [[ "$cols" -lt 40 ]]; then
-        log_warn "Ширина терминала ($cols колонок) может быть мала для QR-кода (рекомендуется от 45+)."
+        log_warn "Terminal width ($cols cols) may be too narrow for QR rendering (recommended: 45+ cols)."
     fi
 
     echo ""
@@ -86,7 +86,6 @@ render_qr() {
     qrencode -t ANSIUTF8 -m 2 "$data"
     echo ""
 }
-
 
 run_systemctl() {
     if [[ $EUID -eq 0 ]]; then
@@ -107,13 +106,13 @@ run_journalctl() {
 validate_user() {
     local username="$1"
     if [[ -z "$username" ]]; then
-        log_error "Имя пользователя не указано."
+        log_error "Username is required."
         exit 1
     fi
 
     local user_dir="$USERS_DIR/$username"
     if [[ ! -d "$user_dir" ]]; then
-        log_error "Каталог пользователя не найден: $user_dir"
+        log_error "User directory not found: $user_dir"
         exit 1
     fi
 }
@@ -190,16 +189,16 @@ cmd_run() {
 
     local cookie_file
     if ! cookie_file=$(resolve_cookie_file "$user_dir" "$PROVIDER"); then
-        log_error "Файл cookies для провайдера '$PROVIDER' не найден в $user_dir"
-        log_error "Ожидался: cookies-$PROVIDER.json или cookies.json"
+        log_error "Cookie file for provider '$PROVIDER' not found in $user_dir"
+        log_error "Expected: cookies-$PROVIDER.json or cookies.json"
         exit 1
     fi
 
     if ! is_valid_cookie_file "$cookie_file"; then
         local sz
         sz=$(wc -c < "$cookie_file" 2>/dev/null | tr -d ' ' || echo 0)
-        log_error "Файл cookies '$cookie_file' пуст или содержит заглушку ($sz байт)."
-        log_error "Для работы провайдера '$PROVIDER' экспортируйте реальные cookies авторизованной сессии из браузера."
+        log_error "Cookie file '$cookie_file' is empty or an unpopulated stub ($sz bytes)."
+        log_error "To use provider '$PROVIDER', export valid authenticated session cookies from your browser."
         exit 1
     fi
 
@@ -210,14 +209,14 @@ cmd_run() {
         wbstream) binary_name="headless-wbstream-creator" ;;
         dion)     binary_name="headless-dion-creator" ;;
         *)
-            log_error "Неизвестный провайдер: '$PROVIDER'. Поддерживаются: telemost, vk, wbstream, dion"
+            log_error "Unknown provider: '$PROVIDER'. Supported: telemost, vk, wbstream, dion"
             exit 1
             ;;
     esac
 
     local binary_path="$WLB_BIN_DIR/$binary_name"
     if [[ ! -x "$binary_path" ]]; then
-        log_error "Исполняемый файл $binary_path не найден или не имеет прав на запуск."
+        log_error "Binary $binary_path not found or lacks executable permissions."
         exit 1
     fi
 
@@ -277,7 +276,7 @@ cmd_run() {
     touch "$current_link_file"
     chmod 644 "$current_link_file" 2>/dev/null || true
 
-    log_info "Запуск $binary_name для пользователя $username (провайдер: $PROVIDER)..."
+    log_info "Starting $binary_name for user $username (provider: $PROVIDER)..."
     exec "$binary_path" "${args[@]}"
 }
 
@@ -299,8 +298,8 @@ cmd_get_link() {
     done
 
     if [[ -z "$username" ]]; then
-        log_error "Имя пользователя не указано."
-        log_error "Использование: whitelist-bypass get-link <пользователь> [--qr]"
+        log_error "Username is required."
+        log_error "Usage: whitelist-bypass get-link <user> [--qr]"
         exit 1
     fi
 
@@ -337,13 +336,13 @@ cmd_get_link() {
         if [[ "$show_qr" == "true" ]]; then
             render_qr "$link" || true
         fi
-        echo "Пользователь: $username"
-        echo "Провайдер:    $provider"
-        echo "Служба:       $service_status"
-        echo "Ссылка:       $link"
+        echo "User:     $username"
+        echo "Provider: $provider"
+        echo "Service:  $service_status"
+        echo "Link:     $link"
     else
-        log_warn "Ссылка еще не сформирована для пользователя $username."
-        log_warn "Запустите ротацию: whitelist-bypass rotate $username"
+        log_warn "Conference link has not been provisioned yet for user $username."
+        log_warn "Run room rotation: whitelist-bypass rotate $username"
         exit 2
     fi
 }
@@ -366,8 +365,8 @@ cmd_rotate() {
     done
 
     if [[ -z "$username" ]]; then
-        log_error "Имя пользователя не указано."
-        log_error "Использование: whitelist-bypass rotate <пользователь> [--qr]"
+        log_error "Username is required."
+        log_error "Usage: whitelist-bypass rotate <user> [--qr]"
         exit 1
     fi
 
@@ -378,24 +377,24 @@ cmd_rotate() {
     local current_link_file="$user_dir/current_link"
     local service_name="whitelist-bypass@$username"
 
-    log_info "Ротация комнаты для $username..."
+    log_info "Rotating conference room for $username..."
 
     if command -v systemctl >/dev/null 2>&1; then
-        log_info "Остановка службы $service_name..."
+        log_info "Stopping service $service_name..."
         run_systemctl stop "$service_name" 2>/dev/null || true
     fi
 
     rm -f "$room_env" "$current_link_file"
 
-    log_info "Запуск службы $service_name для генерации новой комнаты..."
+    log_info "Starting service $service_name to generate a new room..."
     if command -v systemctl >/dev/null 2>&1; then
         run_systemctl start "$service_name"
     else
-        log_error "systemctl недоступен. Ротация требует работающего systemd."
+        log_error "systemctl is unavailable. Room rotation requires an active systemd environment."
         exit 1
     fi
 
-    log_info "Ожидание создания комнаты медиа-сервером..."
+    log_info "Waiting for media server to provision conference room..."
     local timeout=20
     local waited=0
     local new_link=""
@@ -409,7 +408,7 @@ cmd_rotate() {
         fi
 
         if ! run_systemctl is-active "$service_name" >/dev/null 2>&1; then
-            log_error "Служба $service_name аварийно завершилась во время создания комнаты!"
+            log_error "Service $service_name exited prematurely during room generation!"
             if command -v journalctl >/dev/null 2>&1; then
                 run_journalctl -u "$service_name" -n 15 --no-pager >&2 || true
             fi
@@ -421,7 +420,7 @@ cmd_rotate() {
     done
 
     if [[ -z "$new_link" ]]; then
-        log_error "Таймаут ($timeout сек) ожидания ссылки от медиа-сервера."
+        log_error "Timeout (${timeout}s) waiting for room link from media server."
         if command -v journalctl >/dev/null 2>&1; then
             run_journalctl -u "$service_name" -n 15 --no-pager >&2 || true
         fi
@@ -431,7 +430,7 @@ cmd_rotate() {
     echo "CALL_LINK=\"$new_link\"" > "$room_env"
     chmod 600 "$room_env"
 
-    log_ok "Новая комната успешно создана и зафиксирована:"
+    log_ok "New room successfully provisioned and persisted:"
     if [[ "$show_qr" == "true" ]]; then
         render_qr "$new_link" || true
     fi
@@ -460,7 +459,7 @@ cmd_set_provider() {
     done
 
     if [[ -z "$username" || -z "$new_provider" ]]; then
-        log_error "Использование: whitelist-bypass set-provider <пользователь> <telemost|vk|wbstream|dion> [--rotate]"
+        log_error "Usage: whitelist-bypass set-provider <user> <telemost|vk|wbstream|dion> [--rotate]"
         exit 1
     fi
 
@@ -476,11 +475,11 @@ cmd_set_provider() {
         if [[ -n "${cookie_file:-}" && -f "$cookie_file" ]]; then
             sz=$(wc -c < "$cookie_file" 2>/dev/null | tr -d ' ' || echo 0)
         fi
-        log_warn "Внимание: файл cookies для провайдера '$new_provider' не заполнен в $user_dir!"
+        log_warn "Cookie file for provider '$new_provider' is missing or unpopulated in $user_dir!"
         if [[ "$sz" -gt 0 ]]; then
-            log_warn "Текущий файл '$(basename "$cookie_file")' содержит всего $sz байт (заглушка)."
+            log_warn "Current file '$(basename "$cookie_file")' has size $sz bytes (empty stub)."
         fi
-        log_warn "Перед запуском сохраните реальные cookies с авторизацией в 'cookies-$new_provider.json'."
+        log_warn "Populate 'cookies-$new_provider.json' with valid authenticated session cookies before running."
     fi
 
     # Update or add PROVIDER in user.conf
@@ -495,23 +494,23 @@ cmd_set_provider() {
         chmod 600 "$conf_file"
     fi
 
-    log_ok "Провайдер для пользователя '$username' успешно изменен на '$new_provider'."
+    log_ok "Provider for user '$username' changed to '$new_provider'."
 
     if [[ "$do_rotate" == "true" ]]; then
         cmd_rotate "$username" "--qr"
     else
-        log_info "Чтобы применить нового провайдера и сгенерировать новую комнату, выполните:"
+        log_info "To apply changes and provision a new room, execute:"
         log_info "  whitelist-bypass rotate $username --qr"
     fi
 }
 
 cmd_list() {
     if [[ ! -d "$USERS_DIR" ]]; then
-        log_info "Каталог пользователей $USERS_DIR пуст или не существует."
+        log_info "User directory $USERS_DIR is empty or does not exist."
         return 0
     fi
 
-    printf "%-18s %-12s %-12s %s\n" "ПОЛЬЗОВАТЕЛЬ" "ПРОВАЙДЕР" "СТАТУС" "АКТИВНАЯ ССЫЛКА"
+    printf "%-18s %-12s %-12s %s\n" "USER" "PROVIDER" "STATUS" "ACTIVE LINK"
     printf "%-18s %-12s %-12s %s\n" "------------------" "------------" "------------" "----------------------------------------"
 
     local found=0
@@ -551,7 +550,7 @@ cmd_list() {
     done
 
     if [[ $found -eq 0 ]]; then
-        echo "Нет настроенных пользователей в $USERS_DIR"
+        echo "No configured users found in $USERS_DIR"
     fi
 }
 
@@ -566,7 +565,7 @@ cmd_systemctl() {
             run_systemctl "$action" "$service_name"
             ;;
         *)
-            log_error "Неизвестное действие systemctl: $action"
+            log_error "Unknown systemctl action: $action"
             exit 1
             ;;
     esac
@@ -587,35 +586,35 @@ main() {
             ;;
         run)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass run <пользователь>"
+                log_error "Usage: whitelist-bypass run <user>"
                 exit 1
             fi
             cmd_run "$1"
             ;;
         get-link|link)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass get-link <пользователь> [--qr]"
+                log_error "Usage: whitelist-bypass get-link <user> [--qr]"
                 exit 1
             fi
             cmd_get_link "$@"
             ;;
         qr)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass qr <пользователь>"
+                log_error "Usage: whitelist-bypass qr <user>"
                 exit 1
             fi
             cmd_get_link "$@" "--qr"
             ;;
         rotate)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass rotate <пользователь> [--qr]"
+                log_error "Usage: whitelist-bypass rotate <user> [--qr]"
                 exit 1
             fi
             cmd_rotate "$@"
             ;;
         set-provider)
             if [[ $# -lt 2 ]]; then
-                log_error "Использование: whitelist-bypass set-provider <пользователь> <telemost|vk|wbstream|dion> [--rotate]"
+                log_error "Usage: whitelist-bypass set-provider <user> <telemost|vk|wbstream|dion> [--rotate]"
                 exit 1
             fi
             cmd_set_provider "$@"
@@ -625,13 +624,13 @@ main() {
             ;;
         start|stop|restart|status|is-active)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass $action <пользователь>"
+                log_error "Usage: whitelist-bypass $action <user>"
                 exit 1
             fi
             cmd_systemctl "$action" "$1"
             ;;
         *)
-            log_error "Неизвестная команда: '$action'"
+            log_error "Unknown command: '$action'"
             show_usage
             exit 1
             ;;

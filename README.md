@@ -1,59 +1,73 @@
 # nadamu-whitelist-bypass-wrapper
 
-Мульти-аккаунтная серверная обертка и диспетчер для [kulikov0/whitelist-bypass](https://github.com/kulikov0/whitelist-bypass).
+**English** | [Русская версия](README.ru.md)
 
-Решает задачу туннелирования интернет-трафика (L4-over-WebRTC) через медиа-серверы российских сервисов (Яндекс.Телемост, VK Звонки, WB Stream, DION) в условиях строгих белых списков операторов связи.
+Multi-account server-side wrapper and lifecycle orchestrator for [kulikov0/whitelist-bypass](https://github.com/kulikov0/whitelist-bypass).
 
----
-
-## Ключевые возможности
-
-- **Строгая изоляция 1:1:1:** 1 пользователь = 1 сервисный аккаунт (cookies) = 1 активная комната = 1 изолированный headless-creator.
-- **Поддержка всех провайдеров:** Яндекс.Телемост, VK Звонки, WB Stream, DION через единый интерфейс.
-- **Надежная ротация комнат:** автоматическая генерация и фиксация ссылок через флаг ядра `--write-file` без таймаутных костылей (`sleep`).
-- **Управление через systemd:** шаблонизированный изолированный сервис `whitelist-bypass@<username>.service` с жесткими ограничениями (`ProtectSystem=strict`, `NoNewPrivileges=true`).
-- **Удобный CLI-оркестратор:** утилита `whitelist-bypass` для управления жизненным циклом комнат и мониторинга пользователей.
-- **Интерфейсы управления (в разработке):** модульные боты для VK и Telegram.
+Encapsulates L4 network traffic (TCP/UDP) over WebRTC sessions (such as Yandex.Telemost, VK Calls, WB Stream, or DION) through Russian cloud media servers to bypass carrier-grade whitelisting and network censorship.
 
 ---
 
-## Структура репозитория
+## Key Features
+
+- **Strict 1:1:1 Isolation:** 1 user = 1 service account (cookies) = 1 active room = 1 isolated headless creator daemon.
+- **Multi-Provider Support:** Yandex.Telemost, VK Calls, WB Stream, DION unified under a single interface.
+- **Instant Provider Switching:** CLI command `whitelist-bypass set-provider` enables seamless platform switching without manual file editing.
+- **In-Terminal QR Codes:** Command `whitelist-bypass qr <user>` with automatic ANSI half-block formatting and dark theme contrast preservation.
+- **Deterministic Room Rotation:** Native `--write-file` synchronization eliminates fragile race conditions and arbitrary sleep intervals.
+- **Hardened systemd Isolation:** Templated `whitelist-bypass@<username>.service` units enforced with `ProtectSystem=strict` and `NoNewPrivileges=true`.
+- **Developer-Friendly CLI:** Built-in Bash and Zsh tab-completion, dynamic user discovery, and complete manual page (`man whitelist-bypass`).
+
+---
+
+## Repository Structure
 
 ```text
 .
 ├── bin/
-│   └── whitelist-bypass             # Главный CLI-оркестратор
+│   └── whitelist-bypass             # Universal CLI orchestrator
 ├── systemd/
-│   └── whitelist-bypass@.service    # Шаблон службы systemd для пользователей
+│   └── whitelist-bypass@.service    # Hardened systemd service template
 ├── sudoers/
-│   └── whitelist-bypass             # Правило sudoers для служебного пользователя
+│   └── whitelist-bypass             # Sudoers privilege escalation rules
+├── completions/
+│   ├── bash/whitelist-bypass        # Native Bash completion script
+│   └── zsh/_whitelist-bypass        # Native Zsh completion definition
+├── man/
+│   └── whitelist-bypass.1           # Unix man page (man whitelist-bypass)
 ├── examples/
-│   ├── user.conf.example            # Пример файла конфигурации пользователя
-│   └── room.env.example             # Пример файла сохраненной ссылки
+│   ├── user.conf.example            # Example user configuration file
+│   └── room.env.example             # Example persisted room environment file
 ├── docs/
-│   ├── SETUP.md                     # Пошаговая инструкция по ручному развертыванию
-│   └── CLIENT_ANDROID.md            # Инструкция по настройке Android-клиента
-└── PLAN.md                          # Архитектурный план и этапы разработки
+│   ├── en/                          # Documentation in English
+│   │   ├── SETUP.md                 # Step-by-step setup and operations guide
+│   │   └── CLIENT_ANDROID.md        # Android Joiner client configuration guide
+│   └── ru/                          # Documentation in Russian
+│       ├── SETUP.md                 # Пошаговая инструкция по установке
+│       └── CLIENT_ANDROID.md        # Настройка клиента Android
+├── install.sh                       # Idempotent installer and updater
+├── uninstall.sh                     # Safe uninstaller
+└── PLAN.md                          # Architectural roadmap and milestones (in Russian)
 ```
 
 ---
 
-## Быстрая установка в одну команду (curl)
+## Quick Installation via curl
 
-**Когда репозиторий публичный:**
+**When repository is public:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo bash -s -- --build-creators
 ```
 
-**Пока репозиторий приватный:**
+**While repository is private:**
 ```bash
-# Передайте ваш GitHub Personal Access Token (PAT):
+# Pass your GitHub Personal Access Token (PAT):
 curl -fsSL -H "Authorization: token $GITHUB_TOKEN" https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- --build-creators
 ```
 
 ---
 
-## Установка и обновление из локальной копии
+## Local Installation and Updates
 
 ```bash
 git clone https://github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git
@@ -62,52 +76,53 @@ cd nadamu-whitelist-bypass-wrapper
 sudo ./install.sh --build-creators
 ```
 
-Инсталлятор:
-- Создает изолированного системного пользователя `whitelist-bypass`
-- Устанавливает утилиту в `/usr/local/bin/whitelist-bypass`
-- Регистрирует службу `whitelist-bypass@.service` в systemd
-- Настраивает беспарольные права sudoers
-- Подключает автодополнение Bash и man-страницу
-- Автоматически собирает свежие бинарники ядра без багов дисконнекта
+The installer:
+- Provisions the isolated system user `whitelist-bypass`
+- Deploys the CLI binary to `/usr/local/bin/whitelist-bypass`
+- Installs the systemd unit `whitelist-bypass@.service`
+- Configures passwordless sudoers rules
+- Configures Bash/Zsh shell completions and man page
+- Verifies `qrencode` availability for terminal QR codes
+- Compiles latest creator binaries from upstream master
 
-Для **обновления** достаточно выполнить:
+To **update** an existing deployment:
 ```bash
 git pull
 sudo ./install.sh
 ```
 
-Для **удаления**:
+To **uninstall**:
 ```bash
-sudo ./uninstall.sh          # Сохраняет куки и данные пользователей
-sudo ./uninstall.sh --purge  # Полная очистка с данными
+sudo ./uninstall.sh          # Preserves user data and cookies
+sudo ./uninstall.sh --purge  # Complete cleanup including user configs
 ```
 
+---
 
-Базовые команды управления:
+## Basic CLI Commands
+
 ```bash
-# Показать список пользователей и их статус
+# Display all configured users and their tunnel statuses
 whitelist-bypass list
 
-# Создать новую чистую комнату для пользователя (с выводом QR-кода при необходимости)
-whitelist-bypass rotate <username>
+# Provision a fresh conference room (with terminal QR code)
 whitelist-bypass rotate <username> --qr
 
-# Получить текущую ссылку пользователя
+# Retrieve current room URL
 whitelist-bypass get-link <username>
 whitelist-bypass get-link <username> --qr
 
-# Быстрый вывод QR-кода ссылки прямо в терминале для мобильного клиента
+# Display instant QR code for mobile client connection
 whitelist-bypass qr <username>
 
-# Смена платформы/провайдера (telemost, vk, wbstream, dion)
-whitelist-bypass set-provider <username> vk
-# Или со сменой и мгновенной генерацией новой комнаты и QR-кода:
+# Switch provider (telemost, vk, wbstream, dion) and rotate room
 whitelist-bypass set-provider <username> vk --rotate
 
-# Управление службой
+# Service lifecycle control
 whitelist-bypass start <username>
 whitelist-bypass stop <username>
 whitelist-bypass status <username>
 ```
 
-Инструкция для мобильных пользователей Android доступна в [docs/CLIENT_ANDROID.md](docs/CLIENT_ANDROID.md).
+For complete manual setup details, see [docs/en/SETUP.md](docs/en/SETUP.md).
+For mobile client instructions, see [docs/en/CLIENT_ANDROID.md](docs/en/CLIENT_ANDROID.md).

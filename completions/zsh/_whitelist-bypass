@@ -7,7 +7,7 @@ _whitelist_bypass_users() {
         local -a users
         users=(${users_dir}/*(N/:t))
         if (( ${#users} > 0 )); then
-            _describe 'пользователь' users
+            _describe 'user' users
         fi
     fi
 }
@@ -17,19 +17,19 @@ _whitelist_bypass() {
     typeset -A opt_args
 
     local -a commands=(
-        'get-link:Показать текущую ссылку на комнату и статус'
-        'link:Показать текущую ссылку на комнату и статус'
-        'qr:Показать QR-код и ссылку для подключения'
-        'rotate:Создать новую чистую комнату и обновить ссылку'
-        'set-provider:Сменить провайдера (telemost, vk, wbstream, dion)'
-        'list:Список всех пользователей и статусы их служб'
-        'start:Запустить службу туннеля'
-        'stop:Остановить службу туннеля'
-        'restart:Перезапустить службу туннеля'
-        'status:Показать статус systemd'
-        'is-active:Проверить активность службы'
-        'run:Внутренний запуск creator-демона (systemd)'
-        'help:Показать справку'
+        'get-link:Show active conference room link and status'
+        'link:Show active conference room link and status'
+        'qr:Display terminal QR code and link'
+        'rotate:Rotate conference room and persist new link'
+        'set-provider:Change WebRTC provider (telemost, vk, wbstream, dion)'
+        'list:List all configured users and service statuses'
+        'start:Start tunnel service'
+        'stop:Stop tunnel service'
+        'restart:Restart tunnel service'
+        'status:Show systemd service status'
+        'is-active:Check if tunnel service is active'
+        'run:Internal creator daemon launcher (systemd)'
+        'help:Show help summary'
     )
 
     _arguments -C \
@@ -38,27 +38,27 @@ _whitelist_bypass() {
 
     case $state in
         command)
-            _describe 'команда' commands
+            _describe 'command' commands
             ;;
         argument)
             case $words[2] in
                 get-link|link|rotate)
                     local -a opts
-                    opts=('--qr:Отобразить ссылку в виде QR-кода')
-                    _describe 'опция' opts
+                    opts=('--qr:Display conference link as terminal QR code')
+                    _describe 'option' opts
                     _whitelist_bypass_users
                     ;;
                 set-provider)
                     local -a providers
                     providers=(
-                        'telemost:Яндекс.Телемост'
-                        'vk:VK Звонки'
+                        'telemost:Yandex.Telemost'
+                        'vk:VK Calls'
                         'wbstream:WB Stream'
                         'dion:DION'
-                        '--rotate:Автоматически создать новую комнату и показать QR-код'
+                        '--rotate:Automatically provision a new room and display QR code'
                     )
                     _whitelist_bypass_users
-                    _describe 'провайдер / опция' providers
+                    _describe 'provider / option' providers
                     ;;
                 qr|start|stop|restart|status|is-active|run)
                     _whitelist_bypass_users
