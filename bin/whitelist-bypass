@@ -118,6 +118,19 @@ validate_user() {
     fi
 }
 
+is_valid_cookie_file() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+        local size
+        size=$(wc -c < "$file" 2>/dev/null || echo 0)
+        # Valid browser-exported JSON cookie array is typically > 15 bytes
+        if [[ "$size" -gt 15 ]]; then
+            return 0
+        fi
+    fi
+    return 1
+}
+
 resolve_cookie_file() {
     local user_dir="$1"
     local provider="$2"
@@ -132,6 +145,15 @@ resolve_cookie_file() {
 
     candidates+=("$user_dir/cookies.json")
 
+    # 1. Prefer files with actual content (>15 bytes)
+    for file in "${candidates[@]}"; do
+        if is_valid_cookie_file "$file"; then
+            echo "$file"
+            return 0
+        fi
+    done
+
+    # 2. Fallback to any existing file so caller can detect and report stub/empty file
     for file in "${candidates[@]}"; do
         if [[ -f "$file" ]]; then
             echo "$file"
@@ -169,7 +191,15 @@ cmd_run() {
     local cookie_file
     if ! cookie_file=$(resolve_cookie_file "$user_dir" "$PROVIDER"); then
         log_error "Файл cookies для провайдера '$PROVIDER' не найден в $user_dir"
-        log_error "Ожидался: cookies.json или cookies-$PROVIDER.json"
+        log_error "Ожидался: cookies-$PROVIDER.json или cookies.json"
+        exit 1
+    fi
+
+    if ! is_valid_cookie_file "$cookie_file"; then
+        local sz
+        sz=$(wc -c < "$cookie_file" 2>/dev/null | tr -d ' ' || echo 0)
+        log_error "Файл cookies '$cookie_file' пуст или содержит заглушку ($sz байт)."
+        log_error "Для работы провайдера '$PROVIDER' экспортируйте реальные cookies авторизованной сессии из браузера."
         exit 1
     fi
 
@@ -290,7 +320,8 @@ cmd_get_link() {
 
     local service_status="inactive"
     if command -v systemctl >/dev/null 2>&1; then
-        service_status=$(run_systemctl is-active "whitelist-bypass@$username" 2>/dev/null || echo "inactive")
+        service_status=$(run_systemctl is-active "whitelist-bypass@$username" 2>/dev/null || true)
+        service_status="${service_status:-inactive}"
     fi
 
     local link=""
@@ -439,9 +470,17 @@ cmd_set_provider() {
     local conf_file="$user_dir/user.conf"
 
     # Check for provider cookies
-    if ! resolve_cookie_file "$user_dir" "$new_provider" >/dev/null 2>&1; then
-        log_warn "Внимание: файл cookies для провайдера '$new_provider' не найден в $user_dir!"
-        log_warn "Рекомендуется поместить 'cookies-$new_provider.json' в $user_dir перед запуском."
+    local cookie_file
+    if ! cookie_file=$(resolve_cookie_file "$user_dir" "$new_provider") || ! is_valid_cookie_file "$cookie_file"; then
+        local sz=0
+        if [[ -n "${cookie_file:-}" && -f "$cookie_file" ]]; then
+            sz=$(wc -c < "$cookie_file" 2>/dev/null | tr -d ' ' || echo 0)
+        fi
+        log_warn "Внимание: файл cookies для провайдера '$new_provider' не заполнен в $user_dir!"
+        if [[ "$sz" -gt 0 ]]; then
+            log_warn "Текущий файл '$(basename "$cookie_file")' содержит всего $sz байт (заглушка)."
+        fi
+        log_warn "Перед запуском сохраните реальные cookies с авторизацией в 'cookies-$new_provider.json'."
     fi
 
     # Update or add PROVIDER in user.conf
@@ -494,7 +533,8 @@ cmd_list() {
 
             local status="inactive"
             if command -v systemctl >/dev/null 2>&1; then
-                status=$(run_systemctl is-active "whitelist-bypass@$uname" 2>/dev/null || echo "inactive")
+                status=$(run_systemctl is-active "whitelist-bypass@$uname" 2>/dev/null || true)
+                status="${status:-inactive}"
             fi
 
             local link="—"
