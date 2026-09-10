@@ -42,6 +42,8 @@ WhitelistBypass Multi-Account Orchestrator
   get-link, link <пользователь> [--qr] Показать текущую ссылку на комнату и статус
   qr <пользователь>                   Показать QR-код и ссылку для подключения
   rotate <пользователь> [--qr]         Создать новую чистую комнату и обновить ссылку
+  set-provider <пользователь> <провайдер> [--rotate]
+                                      Сменить провайдера (telemost, vk, wbstream, dion)
   list                                Список всех пользователей и статусы их служб
 
 Управление службой systemd:
@@ -121,13 +123,14 @@ resolve_cookie_file() {
     local provider="$2"
 
     local candidates=(
-        "$user_dir/cookies.json"
         "$user_dir/cookies-$provider.json"
     )
 
     if [[ "$provider" == "telemost" ]]; then
         candidates+=("$user_dir/cookies-yandex.json")
     fi
+
+    candidates+=("$user_dir/cookies.json")
 
     for file in "${candidates[@]}"; do
         if [[ -f "$file" ]]; then
@@ -404,6 +407,65 @@ cmd_rotate() {
     echo "$new_link"
 }
 
+cmd_set_provider() {
+    local username=""
+    local new_provider=""
+    local do_rotate=false
+
+    for arg in "$@"; do
+        case "$arg" in
+            --rotate|-r)
+                do_rotate=true
+                ;;
+            telemost|vk|wbstream|dion)
+                new_provider="$arg"
+                ;;
+            *)
+                if [[ -z "$username" ]]; then
+                    username="$arg"
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$username" || -z "$new_provider" ]]; then
+        log_error "Использование: whitelist-bypass set-provider <пользователь> <telemost|vk|wbstream|dion> [--rotate]"
+        exit 1
+    fi
+
+    validate_user "$username"
+
+    local user_dir="$USERS_DIR/$username"
+    local conf_file="$user_dir/user.conf"
+
+    # Check for provider cookies
+    if ! resolve_cookie_file "$user_dir" "$new_provider" >/dev/null 2>&1; then
+        log_warn "Внимание: файл cookies для провайдера '$new_provider' не найден в $user_dir!"
+        log_warn "Рекомендуется поместить 'cookies-$new_provider.json' в $user_dir перед запуском."
+    fi
+
+    # Update or add PROVIDER in user.conf
+    if [[ -f "$conf_file" ]]; then
+        if grep -qE "^PROVIDER=" "$conf_file"; then
+            sed -i "s/^PROVIDER=.*/PROVIDER=$new_provider/" "$conf_file"
+        else
+            echo "PROVIDER=$new_provider" >> "$conf_file"
+        fi
+    else
+        echo "PROVIDER=$new_provider" > "$conf_file"
+        chmod 600 "$conf_file"
+    fi
+
+    log_ok "Провайдер для пользователя '$username' успешно изменен на '$new_provider'."
+
+    if [[ "$do_rotate" == "true" ]]; then
+        cmd_rotate "$username" "--qr"
+    else
+        log_info "Чтобы применить нового провайдера и сгенерировать новую комнату, выполните:"
+        log_info "  whitelist-bypass rotate $username --qr"
+    fi
+}
+
 cmd_list() {
     if [[ ! -d "$USERS_DIR" ]]; then
         log_info "Каталог пользователей $USERS_DIR пуст или не существует."
@@ -510,6 +572,13 @@ main() {
                 exit 1
             fi
             cmd_rotate "$@"
+            ;;
+        set-provider)
+            if [[ $# -lt 2 ]]; then
+                log_error "Использование: whitelist-bypass set-provider <пользователь> <telemost|vk|wbstream|dion> [--rotate]"
+                exit 1
+            fi
+            cmd_set_provider "$@"
             ;;
         list)
             cmd_list

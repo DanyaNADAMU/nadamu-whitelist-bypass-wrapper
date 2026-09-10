@@ -23,6 +23,9 @@ Generate and display an ANSI UTF-8 QR code in the terminal for the user's active
 \fBrotate\fR \fIUSER\fR [\fB\-\-qr\fR]
 Request a new clean conference room from the platform SFU. Stops the current instance, clears previous room tokens, launches a fresh daemon, captures the newly generated link using native \fB\-\-write\-file\fR, and saves it into \fBroom.env\fR. If \fB\-\-qr\fR is given, also displays the newly created link as a QR code.
 .TP
+\fBset\-provider\fR \fIUSER\fR \fIPROVIDER\fR [\fB\-\-rotate\fR]
+Change the active WebRTC platform provider (\fBtelemost\fR, \fBvk\fR, \fBwbstream\fR, \fBdion\fR) in the user's \fBuser.conf\fR. If \fB\-\-rotate\fR is specified, immediately stops the current session, launches the new provider daemon, creates a fresh conference room, and displays its QR code.
+.TP
 \fBlist\fR
 Print a summary table of all configured users, their configured providers, current systemd service statuses, and active room links.
 .TP

@@ -178,3 +178,32 @@ whitelist-bypass qr danya
 whitelist-bypass get-link danya --qr
 whitelist-bypass rotate danya --qr
 ```
+
+---
+
+## 6. Смена платформы/провайдера (например, с Telemost на VK)
+
+Оркестратор поддерживает одновременное хранение cookies для разных сервисов в каталоге пользователя:
+- `cookies-telemost.json` (или `cookies-yandex.json`)
+- `cookies-vk.json`
+- `cookies-wbstream.json`
+- `cookies-dion.json`
+
+### Быстрая смена в одну команду:
+
+1. Сохраните cookies ВКонтакте в файл пользователя:
+   ```bash
+   # Экспортируйте cookies с сайта vk.com через Cookie-Editor в JSON
+   cat << 'EOF' > /etc/whitelist-bypass/users/danya/cookies-vk.json
+   [ ... cookies json ... ]
+   EOF
+   chown whitelist-bypass:whitelist-bypass /etc/whitelist-bypass/users/danya/cookies-vk.json
+   chmod 600 /etc/whitelist-bypass/users/danya/cookies-vk.json
+   ```
+
+2. Выполните команду смены провайдера:
+   ```bash
+   whitelist-bypass set-provider danya vk --rotate
+   ```
+   Флаг `--rotate` сразу остановит службу Телемоста, переключит `PROVIDER=vk` в `user.conf`, создаст новую комнату VK Звонков и выведет в терминал готовый QR-код для подключения.
+

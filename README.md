@@ -99,6 +99,11 @@ whitelist-bypass get-link <username> --qr
 # Быстрый вывод QR-кода ссылки прямо в терминале для мобильного клиента
 whitelist-bypass qr <username>
 
+# Смена платформы/провайдера (telemost, vk, wbstream, dion)
+whitelist-bypass set-provider <username> vk
+# Или со сменой и мгновенной генерацией новой комнаты и QR-кода:
+whitelist-bypass set-provider <username> vk --rotate
+
 # Управление службой
 whitelist-bypass start <username>
 whitelist-bypass stop <username>
