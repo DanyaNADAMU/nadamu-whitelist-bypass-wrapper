@@ -4,8 +4,10 @@ Supervises systemd services, room rotations, and direct creator binary execution
 """
 
 import asyncio
+import grp
 import os
 from pathlib import Path
+import pwd
 import shutil
 import subprocess
 import threading
@@ -22,6 +24,16 @@ class TunnelService:
         self._async_locks: dict[str, asyncio.Lock] = {}
         self._sync_locks: dict[str, threading.Lock] = {}
         self._locks_guard = threading.Lock()
+
+    def _chown_service(self, path: Path) -> None:
+        """Ensure file is owned by service_user:service_group if running as root."""
+        if os.geteuid() == 0:
+            try:
+                uid = pwd.getpwnam(self.config.service_user).pw_uid
+                gid = grp.getgrnam(self.config.service_group).gr_gid
+                os.chown(path, uid, gid)
+            except Exception:
+                pass
 
     def get_unit_name(self, username: str) -> str:
         return f"whitelist-bypass@{username}.service"
@@ -256,6 +268,7 @@ class TunnelService:
         # Truncate / touch current_link file with 0644
         current_link_file.unlink(missing_ok=True)
         current_link_file.touch(mode=0o644)
+        self._chown_service(current_link_file)
 
         # Replace process image
         os.execv(str(binary_path), args)

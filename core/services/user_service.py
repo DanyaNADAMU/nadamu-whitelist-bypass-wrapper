@@ -3,7 +3,10 @@ User management service for WhitelistBypass Core.
 Handles user profiles, configuration parsing, cookie resolution, and room data.
 """
 
+import grp
+import os
 from pathlib import Path
+import pwd
 from typing import Optional
 from core.config import CoreConfig, config as default_config
 from core.models import CookieInfo, RoomInfo, UserConfig, UserSummary
@@ -12,6 +15,16 @@ from core.models import CookieInfo, RoomInfo, UserConfig, UserSummary
 class UserService:
     def __init__(self, cfg: Optional[CoreConfig] = None):
         self.config = cfg or default_config
+
+    def _chown_service(self, path: Path) -> None:
+        """Ensure file is owned by service_user:service_group if running as root."""
+        if os.geteuid() == 0:
+            try:
+                uid = pwd.getpwnam(self.config.service_user).pw_uid
+                gid = grp.getgrnam(self.config.service_group).gr_gid
+                os.chown(path, uid, gid)
+            except Exception:
+                pass
 
     def list_users(self) -> list[str]:
         """Return list of configured usernames sorted alphabetically."""
@@ -121,6 +134,7 @@ class UserService:
         else:
             conf_file.write_text(f'PROVIDER="{clean_provider}"\n', encoding="utf-8")
             conf_file.chmod(0o600)
+        self._chown_service(conf_file)
 
     def resolve_cookie_file(self, username: str, provider: str) -> CookieInfo:
         """
@@ -211,6 +225,7 @@ class UserService:
         room_file = user_dir / "room.env"
         room_file.write_text(f'CALL_LINK="{link.strip()}"\n', encoding="utf-8")
         room_file.chmod(0o600)
+        self._chown_service(room_file)
 
     def resolve_identity(
         self, telegram_id: Optional[int] = None, vk_id: Optional[int] = None

@@ -5,8 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=whitelist-bypass
-Group=whitelist-bypass
 WorkingDirectory=/opt/whitelist-bypass
 RuntimeDirectory=whitelist-bypass
 RuntimeDirectoryMode=0775
@@ -22,7 +20,6 @@ RestartSec=3
 LimitNOFILE=65536
 
 # Filesystem and security hardening
-NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/run/whitelist-bypass /etc/whitelist-bypass

@@ -151,7 +151,8 @@ fi
 
 # 1. Ensure service user exists
 if id "$SERVICE_USER" >/dev/null 2>&1; then
-    log_info "System user '$SERVICE_USER' already exists."
+    log_info "System user '$SERVICE_USER' already exists. Ensuring home directory..."
+    usermod -d "$OPT_DIR" -s /usr/sbin/nologin "$SERVICE_USER" 2>/dev/null || true
 else
     log_info "Creating system user '$SERVICE_USER'..."
     useradd -r -s /usr/sbin/nologin -d "$OPT_DIR" -m "$SERVICE_USER"
