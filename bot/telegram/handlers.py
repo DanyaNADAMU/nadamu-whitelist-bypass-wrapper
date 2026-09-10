@@ -78,9 +78,7 @@ async def cmd_start(message: Message):
         )
         return
 
-    summary = client.user_service.get_user_summary(
-        username, client.tunnel_service.get_status(username)
-    )
+    summary = client.get_user_summary(username)
     status_emoji = "🟢 active" if summary.service_status in ("active", "activating") else f"⚪ {summary.service_status}"
 
     text = get_text(
@@ -239,7 +237,7 @@ async def cmd_provider(message: Message):
             await message.answer(get_text("access_denied", lang, user_id=user_id), parse_mode="HTML")
         return
 
-    summary = client.user_service.get_user_summary(target_user)
+    summary = client.get_user_summary(target_user)
 
     if not target_prov:
         kb = get_provider_keyboard(target_user, summary.provider, lang)
@@ -419,7 +417,7 @@ async def cb_prov_menu(callback: CallbackQuery):
     await callback.answer()
     username = callback.data.split(":", 1)[1]
     lang = get_user_lang(callback)
-    summary = client.user_service.get_user_summary(username)
+    summary = client.get_user_summary(username)
     kb = get_provider_keyboard(username, summary.provider, lang)
     await callback.message.edit_text(
         get_text("provider_menu", lang, username=username, provider=summary.provider.upper()),
@@ -490,9 +488,7 @@ async def cb_back_main(callback: CallbackQuery):
     username = callback.data.split(":", 1)[1]
     lang = get_user_lang(callback)
 
-    summary = client.user_service.get_user_summary(
-        username, client.tunnel_service.get_status(username)
-    )
+    summary = client.get_user_summary(username)
     status_emoji = "🟢 active" if summary.service_status in ("active", "activating") else f"⚪ {summary.service_status}"
 
     text = get_text(

@@ -51,10 +51,15 @@ class TunnelService:
             return self._async_locks[username]
 
     def _run_cmd(self, cmd: list[str]) -> tuple[int, str, str]:
-        """Execute a system command, elevating with sudo if not root."""
+        """Execute a system command, elevating with sudo if not root and mutation required."""
         full_cmd = list(cmd)
-        if os.geteuid() != 0 and cmd[0] in ("systemctl", "journalctl"):
-            full_cmd = ["sudo"] + full_cmd
+        if os.geteuid() != 0:
+            mutating_actions = {"start", "stop", "restart", "reload", "kill", "enable", "disable", "reset-failed"}
+            if cmd and cmd[0] == "systemctl":
+                if len(cmd) > 1 and cmd[1] in mutating_actions:
+                    full_cmd = ["sudo"] + full_cmd
+            elif cmd and cmd[0] == "journalctl":
+                full_cmd = ["sudo"] + full_cmd
 
         proc = subprocess.run(
             full_cmd,

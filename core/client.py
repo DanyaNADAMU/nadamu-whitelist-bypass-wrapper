@@ -74,6 +74,26 @@ class CoreClient:
         except Exception:
             return None
 
+    def get_user_summary(self, username: str) -> UserSummary:
+        """Fetch user summary, querying Core daemon via UDS if running, with direct fallback."""
+        if self.is_daemon_running():
+            res = self._daemon_request("GET", f"/api/v1/users/{username}")
+            if res and isinstance(res, dict) and "user" in res:
+                u = res["user"]
+                return UserSummary(
+                    username=u.get("username", username),
+                    provider=u.get("provider", "telemost"),
+                    service_status=u.get("service_status", "unknown"),
+                    cookie_valid=u.get("cookie_valid", False),
+                    cookie_file=u.get("cookie_file"),
+                    cookie_size=u.get("cookie_size", 0),
+                    link=u.get("link"),
+                    room_env_exists=u.get("room_env_exists", False),
+                )
+
+        status = self.tunnel_service.get_status(username)
+        return self.user_service.get_user_summary(username, status)
+
     def execute_command(self, command: str, **kwargs: Any) -> CommandResult:
         """
         Execute command via Core daemon if running; otherwise fallback directly to in-process logic.
