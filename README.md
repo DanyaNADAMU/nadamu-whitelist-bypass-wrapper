@@ -38,9 +38,37 @@
 
 ---
 
-## Быстрый старт
+## Быстрая установка и обновление
 
-Подробное руководство по ручной установке описано в [docs/SETUP.md](docs/SETUP.md).
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git
+cd nadamu-whitelist-bypass-wrapper
+
+# 2. Запустить инсталлятор под root (или sudo)
+sudo ./install.sh --build-creators
+```
+
+Инсталлятор:
+- Создает изолированного системного пользователя `whitelist-bypass`
+- Устанавливает утилиту в `/usr/local/bin/whitelist-bypass`
+- Регистрирует службу `whitelist-bypass@.service` в systemd
+- Настраивает беспарольные права sudoers
+- Подключает автодополнение Bash и man-страницу
+- Автоматически собирает свежие бинарники ядра без багов дисконнекта
+
+Для **обновления** достаточно выполнить:
+```bash
+git pull
+sudo ./install.sh
+```
+
+Для **удаления**:
+```bash
+sudo ./uninstall.sh          # Сохраняет куки и данные пользователей
+sudo ./uninstall.sh --purge  # Полная очистка с данными
+```
+
 
 Базовые команды управления:
 ```bash
