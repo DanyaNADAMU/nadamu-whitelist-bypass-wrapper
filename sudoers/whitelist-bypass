@@ -30,3 +30,18 @@ whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl status whitelist-bypass-
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active whitelist-bypass-core*
 whitelist-bypass ALL=(ALL) NOPASSWD: /bin/journalctl -u whitelist-bypass-core*
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u whitelist-bypass-core*
+
+# Telegram bot service control
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl start whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl stop whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl restart whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl status whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl is-active whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl start whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl status whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/journalctl -u whitelist-bypass-telegram-bot*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u whitelist-bypass-telegram-bot*
+

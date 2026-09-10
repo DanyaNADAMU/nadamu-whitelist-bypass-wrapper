@@ -161,34 +161,37 @@
 - [x] Настройка прав sudoers `sudoers/whitelist-bypass`.
 - [x] Полная интернационализация кода и локализация документации (`docs/en`, `docs/ru`, `README.md`, `README.ru.md`).
 
-### Этап 2. Systemd-ядро и унифицированный CLI (Текущий этап)
+### Этап 2. Systemd-ядро и унифицированный CLI (Завершено)
 - [x] Проектирование архитектуры демона ядра с локальным API.
-- [ ] Разработка Python-пакета `core/`:
-  - [ ] `core/config.py`: загрузка параметров и путей.
-  - [ ] `core/models.py`: типизированные структуры пользователей, сервисов и статусов.
-  - [ ] `core/commands.py`: единый реестр команд, параметров, алиасов и валидаторов.
-  - [ ] `core/services/user_service.py`: парсинг `user.conf`, приоритет и валидация cookies, привязка `TELEGRAM_ID` / `VK_ID`.
-  - [ ] `core/services/tunnel_service.py`: управление `systemctl`, безопасная ротация через `--write-file`, per-user `asyncio.Lock()`, direct `os.execvp` для `run`.
-  - [ ] `core/services/qr_service.py`: генерация ANSI UTF-8 и Base64/PNG QR-кодов.
-  - [ ] `core/client.py`: клиент поверх Unix Domain Socket (`/run/whitelist-bypass/core.sock`) с авто-фоллбэком на прямой вызов сервисов.
-  - [ ] `core/app.py`: FastAPI сервис (UDS + опциональный HTTP).
-  - [ ] `core/cli.py`: унифицированный CLI-интерфейс с поддержкой цветного терминального вывода и `--json`.
-- [ ] Служба `systemd/whitelist-bypass-core.service`.
-- [ ] Обновление `bin/whitelist-bypass` для вызова `core.cli`.
-- [ ] Обновление `install.sh` (развертывание venv, регистрация сервиса ядра).
-- [ ] Тестирование и верификация на сервере.
+- [x] Разработка Python-пакета `core/`:
+  - [x] `core/config.py`: загрузка параметров и путей.
+  - [x] `core/models.py`: типизированные структуры пользователей, сервисов и статусов.
+  - [x] `core/commands.py`: единый реестр команд, параметров, алиасов и валидаторов.
+  - [x] `core/services/user_service.py`: парсинг `user.conf`, приоритет и валидация cookies, привязка `TELEGRAM_ID` / `VK_ID`.
+  - [x] `core/services/tunnel_service.py`: управление `systemctl`, безопасная ротация через `--write-file`, per-user `asyncio.Lock()`, direct `os.execvp` для `run`.
+  - [x] `core/services/qr_service.py`: генерация ANSI UTF-8 и Base64/PNG QR-кодов.
+  - [x] `core/client.py`: клиент поверх Unix Domain Socket (`/run/whitelist-bypass/core.sock`) с авто-фоллбэком на прямой вызов сервисов.
+  - [x] `core/app.py`: FastAPI сервис (UDS + опциональный HTTP).
+  - [x] `core/cli.py`: унифицированный CLI-интерфейс с поддержкой цветного терминального вывода и `--json`.
+- [x] Служба `systemd/whitelist-bypass-core.service`.
+- [x] Обновление `bin/whitelist-bypass` для вызова `core.cli`.
+- [x] Обновление `install.sh` (развертывание venv, регистрация сервиса ядра).
+- [x] Тестирование и верификация на сервере (запущено и протестировано на `berg`).
 
-### Этап 3. Боты (Telegram и VK)
-- [ ] VK Бот:
-  - LongPoll API (работает даже при жестких белых списках на смартфоне).
-  - Разрешение пользователя по `VK_ID`.
-  - Команды: `/link`, `/qr`, `/rotate`, `/provider`, `/status`, `/help`.
-  - Inline-клавиатура для ротации и переключения провайдера в один клик.
-- [ ] Telegram Бот:
-  - Aiogram 3 / Webhook / LongPolling.
-  - Разрешение пользователя по `TELEGRAM_ID`.
-  - Отправка QR-кода картинкой.
-  - Уведомления об аварийных падениях службы.
+### Этап 3. Боты (В процессе)
+- [x] Telegram Бот (`bot/telegram/`):
+  - [x] Aiogram 3 с LongPolling.
+  - [x] Авторизация и контекстное разрешение пользователя по `TELEGRAM_ID` из `user.conf`.
+  - [x] Панель администратора (`ADMIN_IDS`) с командами `/list`, `/link <user>`, `/rotate <user>`, `/status <user>`.
+  - [x] Команды: `/link`, `/qr`, `/rotate`, `/provider`, `/status`, `/help`.
+  - [x] Inline-клавиатуры для моментальной ротации и выбора провайдера в один клик.
+  - [x] Отправка QR-кода готовой картинкой (`send_photo`).
+  - [x] Служба systemd `whitelist-bypass-telegram-bot.service` с конфигурацией в `/etc/whitelist-bypass/telegram-bot.env`.
+- [ ] VK Бот (`bot/vk/`):
+  - [ ] VK LongPoll API (работает даже при жестких белых списках на смартфоне).
+  - [ ] Разрешение пользователя по `VK_ID`.
+  - [ ] Команды: `/link`, `/qr`, `/rotate`, `/provider`, `/status`, `/help`.
+  - [ ] Inline-клавиатура для ротации и переключения провайдера в один клик.
 
 ### Этап 4. Веб-интерфейс (Next.js Dashboard)
 - [ ] Панель управления на Next.js (App Router):

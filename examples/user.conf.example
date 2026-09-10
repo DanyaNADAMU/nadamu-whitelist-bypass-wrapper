@@ -20,5 +20,12 @@ PEER_ID=
 # Allow joiners to access server's private RFC1918 addresses (default: false)
 ALLOW_PRIVATE_DST=false
 
+# Optional Telegram user ID for Telegram bot authentication & automated resolution
+TELEGRAM_ID=
+
+# Optional VK user ID for VK bot authentication & automated resolution
+VK_ID=
+
 # Verbose debug logging (true | false)
 DEBUG=false
+

@@ -80,6 +80,7 @@ fi
 BIN_INSTALL_PATH="/usr/local/bin/whitelist-bypass"
 SYSTEMD_UNIT_PATH="/etc/systemd/system/whitelist-bypass@.service"
 CORE_UNIT_PATH="/etc/systemd/system/whitelist-bypass-core.service"
+TG_UNIT_PATH="/etc/systemd/system/whitelist-bypass-telegram-bot.service"
 SUDOERS_PATH="/etc/sudoers.d/whitelist-bypass"
 COMPLETION_PATH="/etc/bash_completion.d/whitelist-bypass"
 MAN_PATH="/usr/share/man/man1/whitelist-bypass.1"
@@ -181,11 +182,20 @@ if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
     "$OPT_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
 fi
 
-log_info "Installing core Python package to $OPT_DIR/core..."
-rm -rf "$OPT_DIR/core"
+log_info "Installing Python packages to $OPT_DIR (core and bot)..."
+rm -rf "$OPT_DIR/core" "$OPT_DIR/bot"
 cp -r "$SCRIPT_DIR/core" "$OPT_DIR/core"
+if [[ -d "$SCRIPT_DIR/bot" ]]; then
+    cp -r "$SCRIPT_DIR/bot" "$OPT_DIR/bot"
+fi
+
+if [[ -f "$SCRIPT_DIR/examples/telegram-bot.env.example" && ! -f "$CONF_DIR/telegram-bot.env.example" ]]; then
+    cp "$SCRIPT_DIR/examples/telegram-bot.env.example" "$CONF_DIR/telegram-bot.env.example"
+    chmod 644 "$CONF_DIR/telegram-bot.env.example"
+fi
+
 chown -R "$SERVICE_USER:$SERVICE_USER" "$OPT_DIR"
-log_ok "Core Python package installed."
+log_ok "Python packages installed."
 
 # 4. Install or update CLI orchestrator
 log_info "Installing CLI orchestrator to $BIN_INSTALL_PATH..."
@@ -202,9 +212,22 @@ log_info "Installing systemd core service unit to $CORE_UNIT_PATH..."
 cp "$SCRIPT_DIR/systemd/whitelist-bypass-core.service" "$CORE_UNIT_PATH"
 chmod 644 "$CORE_UNIT_PATH"
 
+log_info "Installing systemd telegram bot service unit to $TG_UNIT_PATH..."
+cp "$SCRIPT_DIR/systemd/whitelist-bypass-telegram-bot.service" "$TG_UNIT_PATH"
+chmod 644 "$TG_UNIT_PATH"
+
 systemctl daemon-reload
 systemctl enable whitelist-bypass-core.service
 systemctl restart whitelist-bypass-core.service || true
+
+# Check if Telegram bot is configured
+TG_ENV_FILE="$CONF_DIR/telegram-bot.env"
+if [[ -f "$TG_ENV_FILE" ]] && grep -qE '^TELEGRAM_BOT_TOKEN="?[0-9]+:[A-Za-z0-9_-]+' "$TG_ENV_FILE"; then
+    log_info "Active Telegram bot configuration detected. Enabling and starting bot service..."
+    systemctl enable whitelist-bypass-telegram-bot.service
+    systemctl restart whitelist-bypass-telegram-bot.service || true
+    log_ok "Telegram bot service started."
+fi
 log_ok "Systemd services installed and reloaded."
 
 # 6. Install sudoers rule
@@ -280,15 +303,21 @@ echo -e "\n${C_BOLD}${C_GREEN}=== Installation / Update Completed Successfully! 
 echo "Installed components:"
 echo "  • CLI utility:       $BIN_INSTALL_PATH"
 echo "  • Core Daemon:       $CORE_UNIT_PATH"
+echo "  • Telegram Bot:      $TG_UNIT_PATH"
 echo "  • Tunnel template:   $SYSTEMD_UNIT_PATH"
 echo "  • Sudoers rule:      $SUDOERS_PATH"
-echo "  • Python package:    $OPT_DIR/core"
+echo "  • Python packages:   $OPT_DIR/core, $OPT_DIR/bot"
 echo "  • Virtualenv:        $OPT_DIR/venv"
 echo "  • Bash completion:   $COMPLETION_PATH"
 echo "  • Zsh completion:    /usr/local/share/zsh/site-functions/_whitelist-bypass"
 echo "  • Man manual:        $MAN_PATH (man whitelist-bypass)"
 echo "  • User configs:      $CONF_DIR/users"
 echo "  • Core binaries:     $OPT_DIR/bin"
+echo ""
+echo "Telegram Bot activation:"
+echo "  1. Copy config: sudo cp $CONF_DIR/telegram-bot.env.example $CONF_DIR/telegram-bot.env"
+echo "  2. Fill token:  sudo nano $CONF_DIR/telegram-bot.env"
+echo "  3. Start bot:   sudo systemctl enable --now whitelist-bypass-telegram-bot"
 echo ""
 echo "Quick status check:"
 echo "  whitelist-bypass list"
