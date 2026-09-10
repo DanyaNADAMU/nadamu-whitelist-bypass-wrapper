@@ -1,0 +1,31 @@
+[Unit]
+Description=Whitelist Bypass Tunnel for %I
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=whitelist-bypass
+Group=whitelist-bypass
+WorkingDirectory=/opt/whitelist-bypass/bin
+
+# Launch user tunnel via the orchestrator
+ExecStart=/usr/local/bin/whitelist-bypass run %I
+
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/etc/whitelist-bypass/users/%I
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

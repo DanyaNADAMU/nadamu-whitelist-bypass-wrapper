@@ -1,0 +1,28 @@
+# Sensitive user data and cookies
+*.json
+!examples/*.json
+!package*.json
+!*config.example.json
+
+# Environment and tokens
+*.env
+*.env.*
+*.token
+*.local
+
+# Runtime and link artifacts
+current_link
+room.env
+*.log
+
+# Python cache & virtualenvs
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.uv/
+
+# OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,0 +1,24 @@
+# User configuration for WhitelistBypass
+# Provider type: telemost | vk | wbstream | dion
+PROVIDER=telemost
+
+# Resource mode: default | moderate | unlimited
+RESOURCES=default
+
+# Optional upstream SOCKS5 proxy (e.g., local Xray-core / Sing-box on VPS)
+# Leave empty for direct egress to the Russian internet
+UPSTREAM_SOCKS=
+UPSTREAM_USER=
+UPSTREAM_PASS=
+
+# Optional display name inside the conference (for WB Stream / Dion)
+DISPLAY_NAME=Headless
+
+# Optional VK peer_id for creating calls in a specific chat (for VK)
+PEER_ID=
+
+# Allow joiners to access server's private RFC1918 addresses (default: false)
+ALLOW_PRIVATE_DST=false
+
+# Verbose debug logging (true | false)
+DEBUG=false

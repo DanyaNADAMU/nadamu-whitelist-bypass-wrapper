@@ -1,0 +1,132 @@
+# Руководство по ручной установке WhitelistBypass Wrapper
+
+Данное руководство описывает пошаговый процесс развертывания мульти-аккаунтной серверной системы **WhitelistBypass** на целевом VPS (Ubuntu 22.04/24.04 или Debian 12).
+
+---
+
+## 1. Подготовка системы и пользователя
+
+Выполняется под пользователем `root`:
+
+```bash
+# 1. Установка базовых системных утилит
+apt update && apt install -y curl jq sudo procps
+
+# 2. Создание системного пользователя для изоляции
+useradd -r -s /usr/sbin/nologin -d /opt/whitelist-bypass -m whitelist-bypass
+
+# 3. Создание структуры каталогов
+mkdir -p /opt/whitelist-bypass/bin
+mkdir -p /etc/whitelist-bypass/users
+
+# 4. Назначение владельцев и прав
+chown -R whitelist-bypass:whitelist-bypass /opt/whitelist-bypass /etc/whitelist-bypass
+chmod 700 /etc/whitelist-bypass/users
+```
+
+---
+
+## 2. Установка бинарников ядра (Creators)
+
+Скачайте актуальные скомпилированные бинарники из релизов [kulikov0/whitelist-bypass](https://github.com/kulikov0/whitelist-bypass/releases) в `/opt/whitelist-bypass/bin/`:
+
+- `headless-telemost-creator` (Яндекс.Телемост)
+- `headless-vk-creator` (VK Звонки)
+- `headless-wbstream-creator` (WB Stream, опционально)
+- `headless-dion-creator` (DION, опционально)
+
+```bash
+# Назначение прав на запуск
+chown -R whitelist-bypass:whitelist-bypass /opt/whitelist-bypass/bin
+chmod +x /opt/whitelist-bypass/bin/headless-*-creator
+```
+
+---
+
+## 3. Установка CLI-оркестратора и службы systemd
+
+Скопируйте файлы из этого репозитория:
+
+```bash
+# 1. Установка CLI оркестратора
+cp bin/whitelist-bypass /usr/local/bin/whitelist-bypass
+chmod +x /usr/local/bin/whitelist-bypass
+
+# 2. Установка шаблона службы systemd
+cp systemd/whitelist-bypass@.service /etc/systemd/system/whitelist-bypass@.service
+systemctl daemon-reload
+
+# 3. Настройка прав sudoers для непривилегированного пользователя
+cp sudoers/whitelist-bypass /etc/sudoers.d/whitelist-bypass
+chmod 0440 /etc/sudoers.d/whitelist-bypass
+```
+
+---
+
+## 4. Добавление нового пользователя
+
+Каждый пользователь изолирован в собственной директории:
+`/etc/whitelist-bypass/users/<имя_пользователя>/`
+
+### Шаг 4.1. Создание папки пользователя
+
+```bash
+sudo -u whitelist-bypass mkdir -p /etc/whitelist-bypass/users/danya
+chmod 700 /etc/whitelist-bypass/users/danya
+```
+
+### Шаг 4.2. Экспорт Cookies
+
+1. Пользователь заходит в браузере на `telemost.yandex.ru` (или `vk.com`) под своим аккаунтом.
+2. С помощью расширения (например, *Cookie-Editor*) экспортирует cookies в формате JSON.
+3. Сохраняет файл на сервере:
+   - Для Телемоста: `/etc/whitelist-bypass/users/danya/cookies.json` (или `cookies-telemost.json`)
+   - Для VK: `/etc/whitelist-bypass/users/danya/cookies.json` (или `cookies-vk.json`)
+4. Устанавливаются строгие права:
+   ```bash
+   chown whitelist-bypass:whitelist-bypass /etc/whitelist-bypass/users/danya/cookies.json
+   chmod 600 /etc/whitelist-bypass/users/danya/cookies.json
+   ```
+
+### Шаг 4.3. Настройка конфигурации (`user.conf`)
+
+Создайте `/etc/whitelist-bypass/users/danya/user.conf`:
+
+```ini
+PROVIDER=telemost
+RESOURCES=default
+UPSTREAM_SOCKS=
+DEBUG=false
+```
+
+Права на файл:
+```bash
+chown whitelist-bypass:whitelist-bypass /etc/whitelist-bypass/users/danya/user.conf
+chmod 600 /etc/whitelist-bypass/users/danya/user.conf
+```
+
+---
+
+## 5. Первый запуск и генерация ссылки
+
+Для первичной генерации комнаты и старта туннеля выполните:
+
+```bash
+sudo -u whitelist-bypass /usr/local/bin/whitelist-bypass rotate danya
+```
+
+Оркестратор:
+1. Запустит службу `whitelist-bypass@danya`.
+2. Дождется генерации новой чистой комнаты на стороне медиа-сервера.
+3. Сохранит ссылку в `/etc/whitelist-bypass/users/danya/room.env`.
+4. Выведет ссылку в терминал.
+
+Проверка статуса всех пользователей:
+```bash
+whitelist-bypass list
+```
+
+Получение текущей ссылки в любое время:
+```bash
+whitelist-bypass get-link danya
+```

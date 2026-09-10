@@ -1,0 +1,432 @@
+#!/usr/bin/env bash
+#
+# whitelist-bypass - Multi-account orchestrator for WhitelistBypass headless creators
+#
+
+set -euo pipefail
+
+WLB_CONF_DIR="${WLB_CONF_DIR:-/etc/whitelist-bypass}"
+WLB_BIN_DIR="${WLB_BIN_DIR:-/opt/whitelist-bypass/bin}"
+USERS_DIR="$WLB_CONF_DIR/users"
+
+# Formatting helpers
+if [[ -t 1 ]]; then
+    C_RESET="\033[0m"
+    C_BOLD="\033[1m"
+    C_RED="\033[31m"
+    C_GREEN="\033[32m"
+    C_YELLOW="\033[33m"
+    C_CYAN="\033[36m"
+else
+    C_RESET=""
+    C_BOLD=""
+    C_RED=""
+    C_GREEN=""
+    C_YELLOW=""
+    C_CYAN=""
+fi
+
+log_info()  { echo -e "${C_CYAN}[INFO]${C_RESET} $*"; }
+log_ok()    { echo -e "${C_GREEN}[OK]${C_RESET} $*"; }
+log_warn()  { echo -e "${C_YELLOW}[WARN]${C_RESET} $*" >&2; }
+log_error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
+
+show_usage() {
+    cat << "USAGE_EOF"
+[1mWhitelistBypass Multi-Account Orchestrator[0m
+
+Использование:
+  whitelist-bypass <команда> [параметры]
+
+Команды управления комнатами и ссылками:
+  get-link, link <пользователь>   Показать текущую ссылку на комнату и статус
+  rotate <пользователь>           Создать новую чистую комнату и обновить ссылку
+  list                            Список всех пользователей и статусы их служб
+
+Управление службой systemd:
+  start <пользователь>            Запустить службу whitelist-bypass@<пользователь>
+  stop <пользователь>             Остановить службу
+  restart <пользователь>          Перезапустить службу
+  status <пользователь>           Показать статус systemd
+  is-active <пользователь>        Проверить активность службы (active/inactive)
+
+Системные команды:
+  run <пользователь>              Внутренний запуск creator-демона (вызывается из systemd)
+  help                            Показать эту справку
+
+USAGE_EOF
+}
+
+validate_user() {
+    local username="$1"
+    if [[ -z "$username" ]]; then
+        log_error "Имя пользователя не указано."
+        exit 1
+    fi
+
+    local user_dir="$USERS_DIR/$username"
+    if [[ ! -d "$user_dir" ]]; then
+        log_error "Каталог пользователя не найден: $user_dir"
+        exit 1
+    fi
+}
+
+resolve_cookie_file() {
+    local user_dir="$1"
+    local provider="$2"
+
+    local candidates=(
+        "$user_dir/cookies.json"
+        "$user_dir/cookies-$provider.json"
+    )
+
+    if [[ "$provider" == "telemost" ]]; then
+        candidates+=("$user_dir/cookies-yandex.json")
+    fi
+
+    for file in "${candidates[@]}"; do
+        if [[ -f "$file" ]]; then
+            echo "$file"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+cmd_run() {
+    local username="$1"
+    validate_user "$username"
+
+    local user_dir="$USERS_DIR/$username"
+    local conf_file="$user_dir/user.conf"
+    local room_env="$user_dir/room.env"
+    local current_link_file="$user_dir/current_link"
+
+    local PROVIDER="telemost"
+    local RESOURCES="default"
+    local UPSTREAM_SOCKS=""
+    local UPSTREAM_USER=""
+    local UPSTREAM_PASS=""
+    local DISPLAY_NAME="Headless"
+    local PEER_ID=""
+    local ALLOW_PRIVATE_DST="false"
+    local DEBUG="false"
+
+    if [[ -f "$conf_file" ]]; then
+        # shellcheck disable=SC1090
+        source "$conf_file"
+    fi
+
+    local cookie_file
+    if ! cookie_file=$(resolve_cookie_file "$user_dir" "$PROVIDER"); then
+        log_error "Файл cookies для провайдера '$PROVIDER' не найден в $user_dir"
+        log_error "Ожидался: cookies.json или cookies-$PROVIDER.json"
+        exit 1
+    fi
+
+    local binary_name=""
+    case "$PROVIDER" in
+        telemost) binary_name="headless-telemost-creator" ;;
+        vk)       binary_name="headless-vk-creator" ;;
+        wbstream) binary_name="headless-wbstream-creator" ;;
+        dion)     binary_name="headless-dion-creator" ;;
+        *)
+            log_error "Неизвестный провайдер: '$PROVIDER'. Поддерживаются: telemost, vk, wbstream, dion"
+            exit 1
+            ;;
+    esac
+
+    local binary_path="$WLB_BIN_DIR/$binary_name"
+    if [[ ! -x "$binary_path" ]]; then
+        log_error "Исполняемый файл $binary_path не найден или не имеет прав на запуск."
+        exit 1
+    fi
+
+    local CALL_LINK=""
+    if [[ -f "$room_env" ]]; then
+        # shellcheck disable=SC1090
+        source "$room_env"
+        CALL_LINK="${CALL_LINK:-${TM_LINK:-}}"
+    fi
+
+    local args=()
+    args+=("--cookies" "$cookie_file")
+    args+=("--write-file" "$current_link_file")
+    args+=("--resources" "$RESOURCES")
+
+    if [[ -n "$UPSTREAM_SOCKS" ]]; then
+        args+=("--upstream-socks" "$UPSTREAM_SOCKS")
+    fi
+    if [[ -n "$UPSTREAM_USER" ]]; then
+        args+=("--upstream-user" "$UPSTREAM_USER")
+    fi
+    if [[ -n "$UPSTREAM_PASS" ]]; then
+        args+=("--upstream-pass" "$UPSTREAM_PASS")
+    fi
+    if [[ "$DEBUG" == "true" || "$DEBUG" == "1" ]]; then
+        args+=("--debug")
+    fi
+    if [[ "$ALLOW_PRIVATE_DST" == "true" || "$ALLOW_PRIVATE_DST" == "1" ]]; then
+        args+=("--allow-private-dst")
+    fi
+
+    case "$PROVIDER" in
+        telemost)
+            if [[ -n "$CALL_LINK" ]]; then
+                args+=("--tm-link" "$CALL_LINK")
+            fi
+            ;;
+        vk)
+            if [[ -n "$CALL_LINK" ]]; then
+                args+=("--vk-link" "$CALL_LINK")
+            fi
+            if [[ -n "$PEER_ID" ]]; then
+                args+=("--peer-id" "$PEER_ID")
+            fi
+            ;;
+        wbstream|dion)
+            if [[ -n "$CALL_LINK" ]]; then
+                args+=("--room" "$CALL_LINK")
+            fi
+            if [[ -n "$DISPLAY_NAME" ]]; then
+                args+=("--name" "$DISPLAY_NAME")
+            fi
+            ;;
+    esac
+
+    rm -f "$current_link_file"
+    touch "$current_link_file"
+    chmod 644 "$current_link_file" 2>/dev/null || true
+
+    log_info "Запуск $binary_name для пользователя $username (провайдер: $PROVIDER)..."
+    exec "$binary_path" "${args[@]}"
+}
+
+cmd_get_link() {
+    local username="$1"
+    validate_user "$username"
+
+    local user_dir="$USERS_DIR/$username"
+    local room_env="$user_dir/room.env"
+    local current_link_file="$user_dir/current_link"
+    local conf_file="$user_dir/user.conf"
+
+    local PROVIDER="telemost"
+    if [[ -f "$conf_file" ]]; then
+        # shellcheck disable=SC1090
+        source "$conf_file"
+    fi
+    local provider="$PROVIDER" 
+
+    local service_status="inactive"
+    if command -v systemctl >/dev/null 2>&1; then
+        service_status=$(systemctl is-active "whitelist-bypass@$username" 2>/dev/null || echo "inactive")
+    fi
+
+    local link=""
+    if [[ -f "$room_env" ]]; then
+        # shellcheck disable=SC1090
+        source "$room_env"
+        link="${CALL_LINK:-${TM_LINK:-}}"
+    elif [[ -f "$current_link_file" ]]; then
+        link=$(tail -n 1 "$current_link_file" 2>/dev/null || true)
+    fi
+
+    if [[ -n "$link" ]]; then
+        echo "Пользователь: $username"
+        echo "Провайдер:    $provider"
+        echo "Служба:       $service_status"
+        echo "Ссылка:       $link"
+    else
+        log_warn "Ссылка еще не сформирована для пользователя $username."
+        log_warn "Запустите ротацию: whitelist-bypass rotate $username"
+        exit 2
+    fi
+}
+
+cmd_rotate() {
+    local username="$1"
+    validate_user "$username"
+
+    local user_dir="$USERS_DIR/$username"
+    local room_env="$user_dir/room.env"
+    local current_link_file="$user_dir/current_link"
+    local service_name="whitelist-bypass@$username"
+
+    log_info "Ротация комнаты для $username..."
+
+    if command -v systemctl >/dev/null 2>&1; then
+        log_info "Остановка службы $service_name..."
+        systemctl stop "$service_name" 2>/dev/null || true
+    fi
+
+    rm -f "$room_env" "$current_link_file"
+
+    log_info "Запуск службы $service_name для генерации новой комнаты..."
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl start "$service_name"
+    else
+        log_error "systemctl недоступен. Ротация требует работающего systemd."
+        exit 1
+    fi
+
+    log_info "Ожидание создания комнаты медиа-сервером..."
+    local timeout=20
+    local waited=0
+    local new_link=""
+
+    while [[ $waited -lt $((timeout * 5)) ]]; do
+        if [[ -s "$current_link_file" ]]; then
+            new_link=$(tail -n 1 "$current_link_file" | tr -d "\r\n")
+            if [[ -n "$new_link" ]]; then
+                break
+            fi
+        fi
+
+        if ! systemctl is-active "$service_name" >/dev/null 2>&1; then
+            log_error "Служба $service_name аварийно завершилась во время создания комнаты!"
+            if command -v journalctl >/dev/null 2>&1; then
+                journalctl -u "$service_name" -n 15 --no-pager >&2 || true
+            fi
+            exit 1
+        fi
+
+        sleep 0.2
+        waited=$((waited + 1))
+    done
+
+    if [[ -z "$new_link" ]]; then
+        log_error "Таймаут ($timeout сек) ожидания ссылки от медиа-сервера."
+        if command -v journalctl >/dev/null 2>&1; then
+            journalctl -u "$service_name" -n 15 --no-pager >&2 || true
+        fi
+        exit 1
+    fi
+
+    echo "CALL_LINK=\"$new_link\"" > "$room_env"
+    chmod 600 "$room_env"
+
+    log_ok "Новая комната успешно создана и зафиксирована:"
+    echo "$new_link"
+}
+
+cmd_list() {
+    if [[ ! -d "$USERS_DIR" ]]; then
+        log_info "Каталог пользователей $USERS_DIR пуст или не существует."
+        return 0
+    fi
+
+    printf "%-18s %-12s %-12s %s\n" "ПОЛЬЗОВАТЕЛЬ" "ПРОВАЙДЕР" "СТАТУС" "АКТИВНАЯ ССЫЛКА"
+    printf "%-18s %-12s %-12s %s\n" "------------------" "------------" "------------" "----------------------------------------"
+
+    local found=0
+    for udir in "$USERS_DIR"/*; do
+        if [[ -d "$udir" ]]; then
+            found=1
+            local uname
+            uname=$(basename "$udir")
+            local conf_file="$udir/user.conf"
+            local room_env="$udir/room.env"
+            local current_link_file="$udir/current_link"
+
+            local PROVIDER="telemost"
+            if [[ -f "$conf_file" ]]; then
+                # shellcheck disable=SC1090
+                source "$conf_file"
+            fi
+            local provider="$PROVIDER" 
+
+            local status="inactive"
+            if command -v systemctl >/dev/null 2>&1; then
+                status=$(systemctl is-active "whitelist-bypass@$uname" 2>/dev/null || echo "inactive")
+            fi
+
+            local link="—"
+            if [[ -f "$room_env" ]]; then
+                # shellcheck disable=SC1090
+                source "$room_env"
+                link="${CALL_LINK:-${TM_LINK:-—}}"
+            elif [[ -f "$current_link_file" ]]; then
+                link=$(tail -n 1 "$current_link_file" 2>/dev/null || echo "—")
+            fi
+
+            printf "%-18s %-12s %-12s %s\n" "$uname" "$provider" "$status" "$link"
+        fi
+    done
+
+    if [[ $found -eq 0 ]]; then
+        echo "Нет настроенных пользователей в $USERS_DIR"
+    fi
+}
+
+cmd_systemctl() {
+    local action="$1"
+    local username="$2"
+    validate_user "$username"
+
+    local service_name="whitelist-bypass@$username"
+    case "$action" in
+        start|stop|restart|status|is-active)
+            systemctl "$action" "$service_name"
+            ;;
+        *)
+            log_error "Неизвестное действие systemctl: $action"
+            exit 1
+            ;;
+    esac
+}
+
+main() {
+    if [[ $# -lt 1 ]]; then
+        show_usage
+        exit 1
+    fi
+
+    local action="$1"
+    shift
+
+    case "$action" in
+        help|-h|--help)
+            show_usage
+            ;;
+        run)
+            if [[ $# -lt 1 ]]; then
+                log_error "Использование: whitelist-bypass run <пользователь>"
+                exit 1
+            fi
+            cmd_run "$1"
+            ;;
+        get-link|link)
+            if [[ $# -lt 1 ]]; then
+                log_error "Использование: whitelist-bypass get-link <пользователь>"
+                exit 1
+            fi
+            cmd_get_link "$1"
+            ;;
+        rotate)
+            if [[ $# -lt 1 ]]; then
+                log_error "Использование: whitelist-bypass rotate <пользователь>"
+                exit 1
+            fi
+            cmd_rotate "$1"
+            ;;
+        list)
+            cmd_list
+            ;;
+        start|stop|restart|status|is-active)
+            if [[ $# -lt 1 ]]; then
+                log_error "Использование: whitelist-bypass $action <пользователь>"
+                exit 1
+            fi
+            cmd_systemctl "$action" "$1"
+            ;;
+        *)
+            log_error "Неизвестная команда: '$action'"
+            show_usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
