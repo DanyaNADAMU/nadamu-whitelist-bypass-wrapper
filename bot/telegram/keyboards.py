@@ -6,31 +6,41 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from bot.telegram.locales import get_text
 
 
-def get_user_main_keyboard(username: str, lang: str = "ru") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+def get_user_main_keyboard(username: str, lang: str = "ru", is_admin: bool = False) -> InlineKeyboardMarkup:
+    rows = [
+        [
+            InlineKeyboardButton(
+                text=get_text("btn_qr", lang),
+                callback_data=f"qr:{username}",
+            ),
+            InlineKeyboardButton(
+                text=get_text("btn_rotate", lang),
+                callback_data=f"rot_confirm:{username}",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                text=get_text("btn_provider", lang),
+                callback_data=f"prov_menu:{username}",
+            ),
+            InlineKeyboardButton(
+                text=get_text("btn_status", lang),
+                callback_data=f"status:{username}",
+            ),
+        ],
+    ]
+
+    if is_admin:
+        rows.append(
             [
                 InlineKeyboardButton(
-                    text=get_text("btn_qr", lang),
-                    callback_data=f"qr:{username}",
-                ),
-                InlineKeyboardButton(
-                    text=get_text("btn_rotate", lang),
-                    callback_data=f"rot_confirm:{username}",
-                ),
-            ],
-            [
-                InlineKeyboardButton(
-                    text=get_text("btn_provider", lang),
-                    callback_data=f"prov_menu:{username}",
-                ),
-                InlineKeyboardButton(
-                    text=get_text("btn_status", lang),
-                    callback_data=f"status:{username}",
-                ),
-            ],
-        ]
-    )
+                    text=get_text("btn_admin_list", lang),
+                    callback_data="admin_list",
+                )
+            ]
+        )
+
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def get_provider_keyboard(username: str, current_provider: str, lang: str = "ru") -> InlineKeyboardMarkup:

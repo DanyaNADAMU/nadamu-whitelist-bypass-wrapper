@@ -31,7 +31,7 @@ STRINGS: dict[str, dict[str, str]] = {
     },
     "welcome_admin": {
         "ru": (
-            "👑 <b>Панель администратора WhitelistBypass</b>\n\n"
+            "👑 <b>Панель администратора Iris</b>\n\n"
             "Вы авторизованы как системный администратор.\n\n"
             "Команды управления:\n"
             "• /list — список всех пользователей и статусов\n"
@@ -40,10 +40,13 @@ STRINGS: dict[str, dict[str, str]] = {
             "• /rotate &lt;user&gt; — сгенерировать новую комнату\n"
             "• /provider &lt;user&gt; [name] — сменить провайдера\n"
             "• /status &lt;user&gt; — статус службы и логи\n"
-            "• /start_user &lt;user&gt;, /stop_user &lt;user&gt;"
+            "• /restart &lt;user&gt; — перезапустить службу пользователя\n"
+            "• /start_service &lt;user&gt; — запустить службу\n"
+            "• /stop_service &lt;user&gt; — остановить службу\n"
+            "• /help — подробная справка"
         ),
         "en": (
-            "👑 <b>WhitelistBypass Admin Panel</b>\n\n"
+            "👑 <b>Iris Admin Panel</b>\n\n"
             "You are authorized as system administrator.\n\n"
             "Management commands:\n"
             "• /list — list all users and statuses\n"
@@ -52,7 +55,60 @@ STRINGS: dict[str, dict[str, str]] = {
             "• /rotate &lt;user&gt; — provision fresh room\n"
             "• /provider &lt;user&gt; [name] — change provider\n"
             "• /status &lt;user&gt; — service status and logs\n"
-            "• /start_user &lt;user&gt;, /stop_user &lt;user&gt;"
+            "• /restart &lt;user&gt; — restart user tunnel service\n"
+            "• /start_service &lt;user&gt; — start user service\n"
+            "• /stop_service &lt;user&gt; — stop user service\n"
+            "• /help — detailed command reference"
+        ),
+    },
+    "help_user": {
+        "ru": (
+            "📖 <b>Справка по командам Iris:</b>\n\n"
+            "• <b>/start</b> — главное меню и текущее состояние службы\n"
+            "• <b>/link</b> — получить активную ссылку на конференц-комнату\n"
+            "• <b>/qr</b> — получить QR-код для мобильного приложения Joiner\n"
+            "• <b>/rotate</b> — пересоздать конференц-комнату (генерация чистой ссылки)\n"
+            "• <b>/provider</b> — меню выбора платформы (VK Звонки / Telemost / WB Stream / DION)\n"
+            "• <b>/status</b> — диагностика службы, валидность cookies и текущая ссылка\n"
+            "• <b>/restart</b> — перезапустить службу туннеля\n"
+            "• <b>/help</b> — показать эту справку"
+        ),
+        "en": (
+            "📖 <b>Iris Command Reference:</b>\n\n"
+            "• <b>/start</b> — main menu and tunnel service status\n"
+            "• <b>/link</b> — get active conference room link\n"
+            "• <b>/qr</b> — display QR code for mobile client\n"
+            "• <b>/rotate</b> — provision fresh room (generate new link)\n"
+            "• <b>/provider</b> — switch media platform (VK Calls / Telemost / WB Stream / DION)\n"
+            "• <b>/status</b> — tunnel diagnostics, service status, and cookie validity\n"
+            "• <b>/restart</b> — restart tunnel service\n"
+            "• <b>/help</b> — display this help reference"
+        ),
+    },
+    "help_admin_section": {
+        "ru": (
+            "\n\n👑 <b>Команды администратора:</b>\n"
+            "• <b>/list</b> — список всех пользователей на сервере и их статусов\n"
+            "• <b>/link &lt;user&gt;</b> — ссылка конкретного пользователя\n"
+            "• <b>/qr &lt;user&gt;</b> — QR-код конкретного пользователя\n"
+            "• <b>/rotate &lt;user&gt;</b> — принудительно пересоздать комнату пользователю\n"
+            "• <b>/provider &lt;user&gt; [name]</b> — сменить платформу пользователю\n"
+            "• <b>/status &lt;user&gt;</b> — статус службы и последние логи journalctl пользователя\n"
+            "• <b>/restart &lt;user&gt;</b> — перезапустить службу пользователя\n"
+            "• <b>/start_service &lt;user&gt;</b> — запустить службу пользователя\n"
+            "• <b>/stop_service &lt;user&gt;</b> — остановить службу пользователя"
+        ),
+        "en": (
+            "\n\n👑 <b>Administrator Commands:</b>\n"
+            "• <b>/list</b> — list all users on the server and their statuses\n"
+            "• <b>/link &lt;user&gt;</b> — get user conference link\n"
+            "• <b>/qr &lt;user&gt;</b> — display user QR code\n"
+            "• <b>/rotate &lt;user&gt;</b> — provision fresh room for user\n"
+            "• <b>/provider &lt;user&gt; [name]</b> — switch provider for user\n"
+            "• <b>/status &lt;user&gt;</b> — diagnostics and recent journal logs for user\n"
+            "• <b>/restart &lt;user&gt;</b> — restart user tunnel service\n"
+            "• <b>/start_service &lt;user&gt;</b> — start user tunnel service\n"
+            "• <b>/stop_service &lt;user&gt;</b> — stop user tunnel service"
         ),
     },
     "access_denied": {
@@ -183,6 +239,7 @@ STRINGS: dict[str, dict[str, str]] = {
     "btn_status": {"ru": "ℹ️ Статус", "en": "ℹ️ Status"},
     "btn_refresh": {"ru": "🔄 Обновить", "en": "🔄 Refresh"},
     "btn_back": {"ru": "◀️ Назад", "en": "◀️ Back"},
+    "btn_admin_list": {"ru": "👥 Список пользователей", "en": "👥 User List"},
 }
 
 

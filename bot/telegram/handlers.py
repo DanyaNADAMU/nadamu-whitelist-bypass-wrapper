@@ -63,7 +63,6 @@ def get_cmd_arg(message: Message) -> Optional[str]:
 
 
 @router.message(CommandStart())
-@router.message(Command("help"))
 async def cmd_start(message: Message):
     lang = get_user_lang(message)
     username, is_admin = resolve_context_user(message)
@@ -88,7 +87,33 @@ async def cmd_start(message: Message):
         provider=summary.provider.upper(),
         status=status_emoji,
     )
-    kb = get_user_main_keyboard(username, lang)
+    if is_admin:
+        admin_hint = "\n\n👑 <i>Режим администратора (/help, /list).</i>" if lang == "ru" else "\n\n👑 <i>Administrator mode (/help, /list).</i>"
+        text += admin_hint
+
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
+    await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+
+@router.message(Command("help"))
+async def cmd_help(message: Message):
+    lang = get_user_lang(message)
+    user_id = message.from_user.id if message.from_user else 0
+    is_admin = bot_config.is_admin(user_id)
+    username = client.user_service.resolve_identity(telegram_id=user_id)
+
+    if not username and not is_admin:
+        await message.answer(
+            get_text("access_denied", lang, user_id=user_id),
+            parse_mode="HTML",
+        )
+        return
+
+    text = get_text("help_user", lang)
+    if is_admin:
+        text += get_text("help_admin_section", lang)
+
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin) if username else None
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
 
@@ -107,7 +132,7 @@ async def cmd_link(message: Message):
 
     res = client.execute_command("link", user=username)
     if not res.success or not res.data or not res.data.get("link"):
-        kb = get_user_main_keyboard(username, lang)
+        kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
         await message.answer(get_text("link_not_provisioned", lang, username=username), reply_markup=kb, parse_mode="HTML")
         return
 
@@ -121,7 +146,7 @@ async def cmd_link(message: Message):
         status=status_emoji,
         link=data.get("link"),
     )
-    kb = get_user_main_keyboard(username, lang)
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
 
 
@@ -152,7 +177,7 @@ async def cmd_qr(message: Message):
         try:
             img_bytes = base64.b64decode(png_b64)
             photo = BufferedInputFile(img_bytes, filename=f"qr_{username}.png")
-            kb = get_user_main_keyboard(username, lang)
+            kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
             await message.answer_photo(photo=photo, caption=caption, reply_markup=kb, parse_mode="HTML")
             return
         except Exception:
@@ -258,7 +283,7 @@ async def cmd_provider(message: Message):
     if res.data and res.data.get("cookie_warning"):
         warning = "\n\n⚠️ <i>Внимание: Cookies для нового провайдера отсутствуют или не заполнены!</i>"
 
-    kb = get_user_main_keyboard(target_user, lang)
+    kb = get_user_main_keyboard(target_user, lang, is_admin=is_admin)
     await message.answer(
         get_text("provider_switched", lang, username=target_user, provider=target_prov.upper(), warning=warning),
         reply_markup=kb,
@@ -299,8 +324,70 @@ async def cmd_status(message: Message):
         cookie_size=data.get("cookie_size", 0),
         link=data.get("link") or "—",
     )
-    kb = get_user_main_keyboard(username, lang)
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
     await message.answer(text, reply_markup=kb, parse_mode="HTML")
+
+
+@router.message(Command("restart"))
+async def cmd_restart(message: Message):
+    lang = get_user_lang(message)
+    arg = get_cmd_arg(message)
+    username, is_admin = resolve_context_user(message, arg)
+
+    if not username:
+        if is_admin:
+            await message.answer("ℹ️ Использование: <code>/restart &lt;user&gt;</code>", parse_mode="HTML")
+        else:
+            await message.answer(get_text("access_denied", lang, user_id=message.from_user.id), parse_mode="HTML")
+        return
+
+    res = client.execute_command("restart", user=username)
+    if res.success:
+        await message.answer(f"🔄 Служба туннеля для <b>{username}</b> успешно перезапущена!", parse_mode="HTML")
+    else:
+        await message.answer(f"❌ Ошибка перезапуска: {res.error or 'Failed'}", parse_mode="HTML")
+
+
+@router.message(Command("start_service"))
+async def cmd_start_service(message: Message):
+    lang = get_user_lang(message)
+    arg = get_cmd_arg(message)
+    username, is_admin = resolve_context_user(message, arg)
+
+    if not is_admin:
+        await message.answer("⛔ Данная команда доступна только администраторам.")
+        return
+
+    if not username:
+        await message.answer("ℹ️ Использование: <code>/start_service &lt;user&gt;</code>", parse_mode="HTML")
+        return
+
+    res = client.execute_command("start", user=username)
+    if res.success:
+        await message.answer(f"▶️ Служба для <b>{username}</b> успешно запущена!", parse_mode="HTML")
+    else:
+        await message.answer(f"❌ Ошибка запуска: {res.error or 'Failed'}", parse_mode="HTML")
+
+
+@router.message(Command("stop_service"))
+async def cmd_stop_service(message: Message):
+    lang = get_user_lang(message)
+    arg = get_cmd_arg(message)
+    username, is_admin = resolve_context_user(message, arg)
+
+    if not is_admin:
+        await message.answer("⛔ Данная команда доступна только администраторам.")
+        return
+
+    if not username:
+        await message.answer("ℹ️ Использование: <code>/stop_service &lt;user&gt;</code>", parse_mode="HTML")
+        return
+
+    res = client.execute_command("stop", user=username)
+    if res.success:
+        await message.answer(f"⏹️ Служба для <b>{username}</b> остановлена!", parse_mode="HTML")
+    else:
+        await message.answer(f"❌ Ошибка остановки: {res.error or 'Failed'}", parse_mode="HTML")
 
 
 @router.message(Command("list"))
@@ -316,7 +403,7 @@ async def cmd_list(message: Message):
         await message.answer("ℹ️ На сервере нет настроенных пользователей.")
         return
 
-    lines = ["📋 <b>Список пользователей WhitelistBypass:</b>\n"]
+    lines = ["📋 <b>Список пользователей Iris:</b>\n"]
     for u in users:
         uname = u.get("username", "—")
         prov = u.get("provider", "—").upper()
@@ -327,6 +414,33 @@ async def cmd_list(message: Message):
         lines.append(f"{status_icon} <b>{uname}</b> [{prov}]: {link_str}")
 
     await message.answer("\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
+
+
+@router.callback_query(F.data == "admin_list")
+async def cb_admin_list(callback: CallbackQuery):
+    user_id = callback.from_user.id if callback.from_user else 0
+    if not bot_config.is_admin(user_id):
+        await callback.answer("⛔ Только для администраторов", show_alert=True)
+        return
+    await callback.answer()
+
+    res = client.execute_command("list")
+    users = (res.data or {}).get("users", [])
+    if not users:
+        await callback.message.answer("ℹ️ На сервере нет настроенных пользователей.")
+        return
+
+    lines = ["📋 <b>Список пользователей Iris:</b>\n"]
+    for u in users:
+        uname = u.get("username", "—")
+        prov = u.get("provider", "—").upper()
+        status = u.get("service_status", "inactive")
+        status_icon = "🟢" if status in ("active", "activating") else "⚪"
+        link = u.get("link")
+        link_str = f'<a href="{link}">Ссылка</a>' if link else "—"
+        lines.append(f"{status_icon} <b>{uname}</b> [{prov}]: {link_str}")
+
+    await callback.message.answer("\n".join(lines), parse_mode="HTML", disable_web_page_preview=True)
 
 
 # Callback Query Handlers
@@ -350,7 +464,8 @@ async def cb_qr(callback: CallbackQuery):
         try:
             img_bytes = base64.b64decode(png_b64)
             photo = BufferedInputFile(img_bytes, filename=f"qr_{username}.png")
-            kb = get_user_main_keyboard(username, lang)
+            is_admin = bot_config.is_admin(callback.from_user.id if callback.from_user else 0)
+            kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
             await callback.message.answer_photo(photo=photo, caption=caption, reply_markup=kb, parse_mode="HTML")
             return
         except Exception:
@@ -441,7 +556,8 @@ async def cb_set_prov(callback: CallbackQuery):
     if res.data and res.data.get("cookie_warning"):
         warning = "\n\n⚠️ <i>Внимание: Cookies для нового провайдера отсутствуют или не заполнены!</i>"
 
-    kb = get_user_main_keyboard(username, lang)
+    is_admin = bot_config.is_admin(callback.from_user.id if callback.from_user else 0)
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
     await callback.message.edit_text(
         get_text("provider_switched", lang, username=username, provider=new_provider.upper(), warning=warning),
         reply_markup=kb,
@@ -475,7 +591,8 @@ async def cb_status(callback: CallbackQuery):
         cookie_size=data.get("cookie_size", 0),
         link=data.get("link") or "—",
     )
-    kb = get_user_main_keyboard(username, lang)
+    is_admin = bot_config.is_admin(callback.from_user.id if callback.from_user else 0)
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
     try:
         await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     except Exception:
@@ -498,7 +615,12 @@ async def cb_back_main(callback: CallbackQuery):
         provider=summary.provider.upper(),
         status=status_emoji,
     )
-    kb = get_user_main_keyboard(username, lang)
+    is_admin = bot_config.is_admin(callback.from_user.id if callback.from_user else 0)
+    if is_admin:
+        admin_hint = "\n\n👑 <i>Режим администратора (/help, /list).</i>" if lang == "ru" else "\n\n👑 <i>Administrator mode (/help, /list).</i>"
+        text += admin_hint
+
+    kb = get_user_main_keyboard(username, lang, is_admin=is_admin)
     try:
         await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
     except Exception:
