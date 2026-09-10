@@ -125,6 +125,18 @@ done
 
 echo -e "${C_BOLD}=== Установка / Обновление WhitelistBypass Wrapper ===${C_RESET}\n"
 
+# 0. Check and install optional dependencies (qrencode for terminal QR codes)
+if ! command -v qrencode >/dev/null 2>&1; then
+    log_info "Утилита qrencode не найдена. Установка для поддержки QR-кодов..."
+    if command -v apt-get >/dev/null 2>&1; then
+        DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode 2>/dev/null || \
+            log_warn "Не удалось автоматически установить qrencode. Установите вручную: apt install -y qrencode"
+    else
+        log_warn "Менеджер пакетов apt-get не найден. Установите 'qrencode' вручную."
+    fi
+fi
+
 # 1. Ensure service user exists
 if id "$SERVICE_USER" >/dev/null 2>&1; then
     log_info "Системный пользователь '$SERVICE_USER' уже существует."
@@ -239,3 +251,4 @@ echo "  • Каталог бинарников: $OPT_DIR/bin"
 echo ""
 echo "Быстрая проверка пользователей:"
 echo "  whitelist-bypass list"
+echo "  whitelist-bypass qr <пользователь>"

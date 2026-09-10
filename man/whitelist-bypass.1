@@ -3,7 +3,7 @@
 whitelist-bypass \- Multi-account orchestrator for WhitelistBypass headless creators
 .SH SYNOPSIS
 .B whitelist-bypass
-\fICOMMAND\fR [\fIUSER\fR]
+\fICOMMAND\fR [\fIUSER\fR] [\fB\-\-qr\fR]
 .SH DESCRIPTION
 .B whitelist-bypass
 is a multi-tenant orchestrator and lifecycle manager for the WhitelistBypass project.
@@ -14,11 +14,14 @@ Each user operates under a strict 1:1:1 model (1 User = 1 Service Account / Cook
 Links are semi-persistent and maintained across regular service restarts.
 .SH COMMANDS
 .TP
-\fBget-link\fR, \fBlink\fR \fIUSER\fR
-Display the current conference URI, tunnel provider, and service status for the specified user.
+\fBget-link\fR, \fBlink\fR \fIUSER\fR [\fB\-\-qr\fR]
+Display the current conference URI, tunnel provider, and service status for the specified user. If \fB\-\-qr\fR is given, also displays the conference URI as an ANSI UTF-8 QR code directly in the terminal.
 .TP
-\fBrotate\fR \fIUSER\fR
-Request a new clean conference room from the platform SFU. Stops the current instance, clears previous room tokens, launches a fresh daemon, captures the newly generated link using native \fB\-\-write\-file\fR, and saves it into \fBroom.env\fR.
+\fBqr\fR \fIUSER\fR
+Generate and display an ANSI UTF-8 QR code in the terminal for the user's active conference room, followed by the textual URL.
+.TP
+\fBrotate\fR \fIUSER\fR [\fB\-\-qr\fR]
+Request a new clean conference room from the platform SFU. Stops the current instance, clears previous room tokens, launches a fresh daemon, captures the newly generated link using native \fB\-\-write\-file\fR, and saves it into \fBroom.env\fR. If \fB\-\-qr\fR is given, also displays the newly created link as a QR code.
 .TP
 \fBlist\fR
 Print a summary table of all configured users, their configured providers, current systemd service statuses, and active room links.
@@ -91,6 +94,11 @@ Template systemd service unit.
 .B Retrieve current link:
 .RS
 # whitelist-bypass get-link danya
+.RE
+.PP
+.B Display terminal QR code:
+.RS
+# whitelist-bypass qr danya
 .RE
 .SH SEE ALSO
 .BR systemctl (1),

@@ -19,6 +19,7 @@ _whitelist_bypass() {
     local -a commands=(
         'get-link:Показать текущую ссылку на комнату и статус'
         'link:Показать текущую ссылку на комнату и статус'
+        'qr:Показать QR-код и ссылку для подключения'
         'rotate:Создать новую чистую комнату и обновить ссылку'
         'list:Список всех пользователей и статусы их служб'
         'start:Запустить службу туннеля'
@@ -32,8 +33,7 @@ _whitelist_bypass() {
 
     _arguments -C \
         '1: :->command' \
-        '2: :->argument' \
-        '*:: :->args'
+        '*: :->argument'
 
     case $state in
         command)
@@ -41,7 +41,13 @@ _whitelist_bypass() {
             ;;
         argument)
             case $words[2] in
-                get-link|link|rotate|start|stop|restart|status|is-active|run)
+                get-link|link|rotate)
+                    local -a opts
+                    opts=('--qr:Отобразить ссылку в виде QR-кода')
+                    _describe 'опция' opts
+                    _whitelist_bypass_users
+                    ;;
+                qr|start|stop|restart|status|is-active|run)
                     _whitelist_bypass_users
                     ;;
             esac

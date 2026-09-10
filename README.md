@@ -88,11 +88,16 @@ sudo ./uninstall.sh --purge  # Полная очистка с данными
 # Показать список пользователей и их статус
 whitelist-bypass list
 
-# Создать новую чистую комнату для пользователя
+# Создать новую чистую комнату для пользователя (с выводом QR-кода при необходимости)
 whitelist-bypass rotate <username>
+whitelist-bypass rotate <username> --qr
 
 # Получить текущую ссылку пользователя
 whitelist-bypass get-link <username>
+whitelist-bypass get-link <username> --qr
+
+# Быстрый вывод QR-кода ссылки прямо в терминале для мобильного клиента
+whitelist-bypass qr <username>
 
 # Управление службой
 whitelist-bypass start <username>

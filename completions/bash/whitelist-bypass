@@ -13,8 +13,8 @@ _whitelist_bypass() {
         cword=$COMP_CWORD
     fi
 
-    local commands="get-link link rotate list start stop restart status is-active run help"
-    local user_commands="get-link link rotate start stop restart status is-active run"
+    local commands="get-link link qr rotate list start stop restart status is-active run help"
+    local user_commands="get-link link qr rotate start stop restart status is-active run"
 
     # Complete main command
     if [[ $cword -eq 1 ]]; then
@@ -22,19 +22,26 @@ _whitelist_bypass() {
         return 0
     fi
 
-    # Complete username if previous command expects a user
-    if [[ $cword -eq 2 ]]; then
-        if [[ " $user_commands " =~ [[:space:]]${prev}[[:space:]] ]]; then
-            local conf_dir="${WLB_CONF_DIR:-/etc/whitelist-bypass}"
-            local users_dir="$conf_dir/users"
-            if [[ -d "$users_dir" ]]; then
-                local user_list
-                user_list=$(find "$users_dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null || \
-                            for d in "$users_dir"/*/; do [[ -d "$d" ]] && basename "$d"; done)
-                COMPREPLY=($(compgen -W "$user_list" -- "$cur"))
-                return 0
-            fi
+    # Complete options and usernames for subcommands
+    local cmd="${COMP_WORDS[1]}"
+    if [[ " $user_commands " =~ [[:space:]]${cmd}[[:space:]] ]]; then
+        local conf_dir="${WLB_CONF_DIR:-/etc/whitelist-bypass}"
+        local users_dir="$conf_dir/users"
+        local user_list=""
+        if [[ -d "$users_dir" ]]; then
+            user_list=$(find "$users_dir" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null || \
+                        for d in "$users_dir"/*/; do [[ -d "$d" ]] && basename "$d"; done)
         fi
+
+        case "$cmd" in
+            get-link|link|rotate)
+                COMPREPLY=($(compgen -W "$user_list --qr" -- "$cur"))
+                ;;
+            *)
+                COMPREPLY=($(compgen -W "$user_list" -- "$cur"))
+                ;;
+        esac
+        return 0
     fi
 }
 

@@ -33,15 +33,16 @@ log_error() { echo -e "${C_RED}[ERROR]${C_RESET} $*" >&2; }
 
 show_usage() {
     cat << "USAGE_EOF"
-[1mWhitelistBypass Multi-Account Orchestrator[0m
+WhitelistBypass Multi-Account Orchestrator
 
 Использование:
   whitelist-bypass <команда> [параметры]
 
 Команды управления комнатами и ссылками:
-  get-link, link <пользователь>   Показать текущую ссылку на комнату и статус
-  rotate <пользователь>           Создать новую чистую комнату и обновить ссылку
-  list                            Список всех пользователей и статусы их служб
+  get-link, link <пользователь> [--qr] Показать текущую ссылку на комнату и статус
+  qr <пользователь>                   Показать QR-код и ссылку для подключения
+  rotate <пользователь> [--qr]         Создать новую чистую комнату и обновить ссылку
+  list                                Список всех пользователей и статусы их служб
 
 Управление службой systemd:
   start <пользователь>            Запустить службу whitelist-bypass@<пользователь>
@@ -55,6 +56,33 @@ show_usage() {
   help                            Показать эту справку
 
 USAGE_EOF
+}
+
+render_qr() {
+    local data="$1"
+    if [[ -z "$data" ]]; then
+        return 1
+    fi
+
+    if ! command -v qrencode >/dev/null 2>&1; then
+        log_warn "Утилита 'qrencode' не найдена в системе."
+        log_info "Для отображения QR-кодов установите пакет: sudo apt install -y qrencode"
+        return 1
+    fi
+
+    local cols=80
+    if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+        cols=$(tput cols 2>/dev/null || echo "${COLUMNS:-80}")
+    fi
+
+    if [[ "$cols" -lt 40 ]]; then
+        log_warn "Ширина терминала ($cols колонок) может быть мала для QR-кода (рекомендуется от 45+)."
+    fi
+
+    echo ""
+    # Render QR code using ANSIUTF8 with 2-module quiet zone margin
+    qrencode -t ANSIUTF8 -m 2 "$data"
+    echo ""
 }
 
 
@@ -221,7 +249,28 @@ cmd_run() {
 }
 
 cmd_get_link() {
-    local username="$1"
+    local username=""
+    local show_qr=false
+
+    for arg in "$@"; do
+        case "$arg" in
+            --qr|-q)
+                show_qr=true
+                ;;
+            *)
+                if [[ -z "$username" ]]; then
+                    username="$arg"
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$username" ]]; then
+        log_error "Имя пользователя не указано."
+        log_error "Использование: whitelist-bypass get-link <пользователь> [--qr]"
+        exit 1
+    fi
+
     validate_user "$username"
 
     local user_dir="$USERS_DIR/$username"
@@ -251,6 +300,9 @@ cmd_get_link() {
     fi
 
     if [[ -n "$link" ]]; then
+        if [[ "$show_qr" == "true" ]]; then
+            render_qr "$link" || true
+        fi
         echo "Пользователь: $username"
         echo "Провайдер:    $provider"
         echo "Служба:       $service_status"
@@ -263,7 +315,28 @@ cmd_get_link() {
 }
 
 cmd_rotate() {
-    local username="$1"
+    local username=""
+    local show_qr=false
+
+    for arg in "$@"; do
+        case "$arg" in
+            --qr|-q)
+                show_qr=true
+                ;;
+            *)
+                if [[ -z "$username" ]]; then
+                    username="$arg"
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$username" ]]; then
+        log_error "Имя пользователя не указано."
+        log_error "Использование: whitelist-bypass rotate <пользователь> [--qr]"
+        exit 1
+    fi
+
     validate_user "$username"
 
     local user_dir="$USERS_DIR/$username"
@@ -325,6 +398,9 @@ cmd_rotate() {
     chmod 600 "$room_env"
 
     log_ok "Новая комната успешно создана и зафиксирована:"
+    if [[ "$show_qr" == "true" ]]; then
+        render_qr "$new_link" || true
+    fi
     echo "$new_link"
 }
 
@@ -416,17 +492,24 @@ main() {
             ;;
         get-link|link)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass get-link <пользователь>"
+                log_error "Использование: whitelist-bypass get-link <пользователь> [--qr]"
                 exit 1
             fi
-            cmd_get_link "$1"
+            cmd_get_link "$@"
+            ;;
+        qr)
+            if [[ $# -lt 1 ]]; then
+                log_error "Использование: whitelist-bypass qr <пользователь>"
+                exit 1
+            fi
+            cmd_get_link "$@" "--qr"
             ;;
         rotate)
             if [[ $# -lt 1 ]]; then
-                log_error "Использование: whitelist-bypass rotate <пользователь>"
+                log_error "Использование: whitelist-bypass rotate <пользователь> [--qr]"
                 exit 1
             fi
-            cmd_rotate "$1"
+            cmd_rotate "$@"
             ;;
         list)
             cmd_list

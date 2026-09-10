@@ -42,7 +42,7 @@ sudo ./install.sh
 
 ```bash
 # 1. Установка базовых системных утилит
-apt update && apt install -y curl jq sudo procps
+apt update && apt install -y curl jq sudo procps qrencode
 
 # 2. Создание системного пользователя для изоляции
 useradd -r -s /usr/sbin/nologin -d /opt/whitelist-bypass -m whitelist-bypass
@@ -169,4 +169,12 @@ whitelist-bypass list
 Получение текущей ссылки в любое время:
 ```bash
 whitelist-bypass get-link danya
+```
+
+Отображение QR-кода ссылки для быстрого подключения мобильного клиента:
+```bash
+whitelist-bypass qr danya
+# Или с флагом --qr при получении ссылки или ротации:
+whitelist-bypass get-link danya --qr
+whitelist-bypass rotate danya --qr
 ```
