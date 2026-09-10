@@ -15,17 +15,17 @@ ExecStart=/usr/local/bin/whitelist-bypass run %I
 Restart=always
 RestartSec=5
 
-# Security hardening
+# High-concurrency socket limits for WebRTC and proxying
+LimitNOFILE=1048576
+LimitNPROC=512
+
+# Security hardening (retaining safe filesystem isolation)
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/etc/whitelist-bypass/users/%I
 PrivateTmp=true
-PrivateDevices=true
-ProtectKernelTunables=true
-ProtectKernelModules=true
 ProtectControlGroups=true
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
 
 [Install]
 WantedBy=multi-user.target
