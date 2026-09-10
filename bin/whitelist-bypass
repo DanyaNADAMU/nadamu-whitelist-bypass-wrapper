@@ -436,7 +436,7 @@ main() {
                 log_error "Использование: whitelist-bypass $action <пользователь>"
                 exit 1
             fi
-            cmd_run_systemctl "$action" "$1"
+            cmd_systemctl "$action" "$1"
             ;;
         *)
             log_error "Неизвестная команда: '$action'"
