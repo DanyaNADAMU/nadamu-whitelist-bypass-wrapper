@@ -1,0 +1,52 @@
+#compdef whitelist-bypass
+
+_whitelist_bypass_users() {
+    local conf_dir="${WLB_CONF_DIR:-/etc/whitelist-bypass}"
+    local users_dir="$conf_dir/users"
+    if [[ -d "$users_dir" ]]; then
+        local -a users
+        users=(${users_dir}/*(N/:t))
+        if (( ${#users} > 0 )); then
+            _describe 'пользователь' users
+        fi
+    fi
+}
+
+_whitelist_bypass() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    local -a commands=(
+        'get-link:Показать текущую ссылку на комнату и статус'
+        'link:Показать текущую ссылку на комнату и статус'
+        'rotate:Создать новую чистую комнату и обновить ссылку'
+        'list:Список всех пользователей и статусы их служб'
+        'start:Запустить службу туннеля'
+        'stop:Остановить службу туннеля'
+        'restart:Перезапустить службу туннеля'
+        'status:Показать статус systemd'
+        'is-active:Проверить активность службы'
+        'run:Внутренний запуск creator-демона (systemd)'
+        'help:Показать справку'
+    )
+
+    _arguments -C \
+        '1: :->command' \
+        '2: :->argument' \
+        '*:: :->args'
+
+    case $state in
+        command)
+            _describe 'команда' commands
+            ;;
+        argument)
+            case $words[2] in
+                get-link|link|rotate|start|stop|restart|status|is-active|run)
+                    _whitelist_bypass_users
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_whitelist_bypass "$@"

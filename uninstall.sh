@@ -74,7 +74,11 @@ rm -f /etc/sudoers.d/whitelist-bypass
 log_ok "Удален /etc/sudoers.d/whitelist-bypass"
 
 rm -f /etc/bash_completion.d/whitelist-bypass
-log_ok "Удален /etc/bash_completion.d/whitelist-bypass"
+rm -f /usr/share/bash-completion/completions/whitelist-bypass
+rm -f /usr/local/share/zsh/site-functions/_whitelist-bypass
+rm -f /usr/share/zsh/vendor-completions/_whitelist-bypass
+rm -f /usr/share/zsh/site-functions/_whitelist-bypass
+log_ok "Удалены файлы автодополнения Bash и Zsh"
 
 rm -f /usr/share/man/man1/whitelist-bypass.1
 if command -v mandb >/dev/null 2>&1; then

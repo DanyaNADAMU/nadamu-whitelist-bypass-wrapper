@@ -102,11 +102,27 @@ cp "$SCRIPT_DIR/sudoers/whitelist-bypass" "$SUDOERS_PATH"
 chmod 0440 "$SUDOERS_PATH"
 log_ok "Правило sudoers настроено."
 
-# 6. Install shell completions
-log_info "Установка автодополнения Bash в $COMPLETION_PATH..."
-cp "$SCRIPT_DIR/completions/whitelist-bypass" "$COMPLETION_PATH"
+# 6. Install shell completions (Bash & Zsh)
+log_info "Установка автодополнения для Bash..."
+mkdir -p /etc/bash_completion.d
+cp "$SCRIPT_DIR/completions/bash/whitelist-bypass" "$COMPLETION_PATH"
 chmod 644 "$COMPLETION_PATH"
-log_ok "Автодополнение установлено."
+if [[ -d /usr/share/bash-completion/completions ]]; then
+    cp "$SCRIPT_DIR/completions/bash/whitelist-bypass" /usr/share/bash-completion/completions/whitelist-bypass
+fi
+log_ok "Автодополнение Bash установлено."
+
+log_info "Установка автодополнения для Zsh..."
+mkdir -p /usr/local/share/zsh/site-functions
+cp "$SCRIPT_DIR/completions/zsh/_whitelist-bypass" /usr/local/share/zsh/site-functions/_whitelist-bypass
+chmod 644 /usr/local/share/zsh/site-functions/_whitelist-bypass
+if [[ -d /usr/share/zsh/vendor-completions ]]; then
+    cp "$SCRIPT_DIR/completions/zsh/_whitelist-bypass" /usr/share/zsh/vendor-completions/_whitelist-bypass
+fi
+if [[ -d /usr/share/zsh/site-functions ]]; then
+    cp "$SCRIPT_DIR/completions/zsh/_whitelist-bypass" /usr/share/zsh/site-functions/_whitelist-bypass
+fi
+log_ok "Автодополнение Zsh установлено."
 
 # 7. Install man page
 log_info "Установка man-страницы в $MAN_PATH..."
