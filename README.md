@@ -38,14 +38,27 @@
 
 ---
 
-## Быстрая установка и обновление
+## Быстрая установка в одну команду (curl)
+
+**Когда репозиторий публичный:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo bash -s -- --build-creators
+```
+
+**Пока репозиторий приватный:**
+```bash
+# Передайте ваш GitHub Personal Access Token (PAT):
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- --build-creators
+```
+
+---
+
+## Установка и обновление из локальной копии
 
 ```bash
-# 1. Клонировать репозиторий
 git clone https://github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git
 cd nadamu-whitelist-bypass-wrapper
 
-# 2. Запустить инсталлятор под root (или sudo)
 sudo ./install.sh --build-creators
 ```
 

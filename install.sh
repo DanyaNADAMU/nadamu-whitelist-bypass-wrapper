@@ -12,7 +12,69 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+
+# Bootstrap mode: when piped through curl/stdin or executed without repository files
+REPO_URL="https://github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git"
+REPO_SSH="git@github.com:DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git"
+
+if [[ -z "$SCRIPT_DIR" || ! -f "$SCRIPT_DIR/bin/whitelist-bypass" || ! -f "$SCRIPT_DIR/systemd/whitelist-bypass@.service" ]]; then
+    echo -e "\033[36m[INFO]\033[0m Скрипт запущен удаленно. Клонирование репозитория во временный каталог..."
+
+    if ! command -v git >/dev/null 2>&1; then
+        echo -e "\033[31m[ERROR]\033[0m Для установки требуется git. Установите: apt update && apt install -y git" >&2
+        exit 1
+    fi
+
+    TMP_CLONE_DIR=$(mktemp -d)
+    trap 'rm -rf "$TMP_CLONE_DIR"' EXIT
+
+    CLONED=false
+    AUTH_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+
+    # 1. Try with provided token
+    if [[ -n "$AUTH_TOKEN" ]]; then
+        echo -e "\033[36m[INFO]\033[0m Аутентификация через GITHUB_TOKEN..."
+        if git clone --depth 1 "https://x-access-token:${AUTH_TOKEN}@github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git" "$TMP_CLONE_DIR/repo" 2>/dev/null; then
+            CLONED=true
+        fi
+    fi
+
+    # 2. Try anonymous public clone
+    if [[ "$CLONED" != "true" ]]; then
+        if git clone --depth 1 "$REPO_URL" "$TMP_CLONE_DIR/repo" 2>/dev/null; then
+            CLONED=true
+        fi
+    fi
+
+    # 3. Try SSH clone
+    if [[ "$CLONED" != "true" ]]; then
+        if git clone --depth 1 "$REPO_SSH" "$TMP_CLONE_DIR/repo" 2>/dev/null; then
+            CLONED=true
+        fi
+    fi
+
+    # 4. Interactive token prompt fallback
+    if [[ "$CLONED" != "true" ]]; then
+        echo -e "\033[33m[WARN]\033[0m Репозиторий приватный и SSH-ключ недоступен." >&2
+        if [[ -t 0 ]]; then
+            read -rsp "Введите ваш GitHub Personal Access Token: " USER_INPUT_TOKEN </dev/tty
+            echo ""
+            if git clone --depth 1 "https://x-access-token:${USER_INPUT_TOKEN}@github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git" "$TMP_CLONE_DIR/repo"; then
+                CLONED=true
+            fi
+        fi
+    fi
+
+    if [[ "$CLONED" != "true" ]]; then
+        echo -e "\033[31m[ERROR]\033[0m Не удалось клонировать репозиторий. Проверьте права или задайте GITHUB_TOKEN." >&2
+        exit 1
+    fi
+
+    echo -e "\033[32m[OK]\033[0m Репозиторий успешно получен. Запуск основной процедуры установки...\n"
+    bash "$TMP_CLONE_DIR/repo/install.sh" "$@"
+    exit 0
+fi
 
 # Configuration paths
 BIN_INSTALL_PATH="/usr/local/bin/whitelist-bypass"

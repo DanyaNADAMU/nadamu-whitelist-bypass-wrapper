@@ -1,14 +1,25 @@
 # Руководство по развертыванию WhitelistBypass Wrapper
 
-## Способ 1. Автоматическая установка через инсталлятор (Рекомендуется)
+## Способ 1. Установка в одну команду через curl (Рекомендуется)
 
-Клонируйте репозиторий на сервер и запустите готовый инсталлятор:
+**Для публичного репозитория:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo bash -s -- --build-creators
+```
+
+**Для приватного репозитория (с токеном):**
+```bash
+curl -fsSL -H "Authorization: token $GITHUB_TOKEN" https://raw.githubusercontent.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper/main/install.sh | sudo GITHUB_TOKEN=$GITHUB_TOKEN bash -s -- --build-creators
+```
+
+---
+
+## Способ 2. Установка из локально склонированного репозитория
 
 ```bash
 git clone https://github.com/DanyaNADAMU/nadamu-whitelist-bypass-wrapper.git
 cd nadamu-whitelist-bypass-wrapper
 
-# Установка и автоматическая сборка свежих бинарников ядра
 sudo ./install.sh --build-creators
 ```
 
@@ -22,7 +33,7 @@ sudo ./install.sh
 
 ---
 
-## Способ 2. Ручная пошаговая установка
+## Способ 3. Ручная пошаговая установка
 
 
 ## 1. Подготовка системы и пользователя
