@@ -3,7 +3,7 @@
 whitelist-bypass \- Multi-account orchestrator for WhitelistBypass headless creators
 .SH SYNOPSIS
 .B whitelist-bypass
-\fICOMMAND\fR [\fIUSER\fR] [\fB\-\-qr\fR]
+\fICOMMAND\fR [\fIUSER\fR] [\fB\-\-qr\fR] [\fB\-\-json\fR]
 .SH DESCRIPTION
 .B whitelist-bypass
 is a multi-tenant orchestrator and lifecycle manager for the WhitelistBypass project.
@@ -14,7 +14,7 @@ Each user operates under a strict 1:1:1 model (1 User = 1 Service Account / Cook
 Links are semi-persistent and maintained across regular service restarts.
 .SH COMMANDS
 .TP
-\fBget-link\fR, \fBlink\fR \fIUSER\fR [\fB\-\-qr\fR]
+\fBlink\fR, \fBget-link\fR \fIUSER\fR [\fB\-\-qr\fR]
 Display the current conference URI, tunnel provider, and service status for the specified user. If \fB\-\-qr\fR is given, also displays the conference URI as an ANSI UTF-8 QR code directly in the terminal.
 .TP
 \fBqr\fR \fIUSER\fR
@@ -23,7 +23,7 @@ Generate and display an ANSI UTF-8 QR code in the terminal for the user's active
 \fBrotate\fR \fIUSER\fR [\fB\-\-qr\fR]
 Request a new clean conference room from the platform SFU. Stops the current instance, clears previous room tokens, launches a fresh daemon, captures the newly generated link using native \fB\-\-write\-file\fR, and saves it into \fBroom.env\fR. If \fB\-\-qr\fR is given, also displays the newly created link as a QR code.
 .TP
-\fBset\-provider\fR \fIUSER\fR \fIPROVIDER\fR [\fB\-\-rotate\fR]
+\fBprovider\fR, \fBset\-provider\fR \fIUSER\fR \fIPROVIDER\fR [\fB\-\-rotate\fR]
 Change the active WebRTC platform provider (\fBtelemost\fR, \fBvk\fR, \fBwbstream\fR, \fBdion\fR) in the user's \fBuser.conf\fR. If \fB\-\-rotate\fR is specified, immediately stops the current session, launches the new provider daemon, creates a fresh conference room, and displays its QR code.
 .TP
 \fBlist\fR
@@ -49,6 +49,16 @@ Internal entrypoint executed by the systemd service template. Resolves user conf
 .TP
 \fBhelp\fR
 Display command usage summary.
+.SH OPTIONS
+.TP
+\fB\-\-json\fR
+Output all command results in structured, machine-readable JSON format.
+.TP
+\fB\-\-qr\fR, \fB\-q\fR
+Render an ANSI UTF-8 QR code directly in the terminal for room links.
+.TP
+\fB\-\-rotate\fR, \fB\-r\fR
+When changing providers via \fBprovider\fR, immediately rotate and provision a new room.
 .SH CONFIGURATION
 Each user is configured in their own subdirectory under \fI/etc/whitelist-bypass/users/<username>/\fR:
 .TP
@@ -62,11 +72,15 @@ User-specific parameters in key=value format:
 .IP \(bu 2
 \fBUPSTREAM_SOCKS\fR: Optional upstream SOCKS5 proxy (e.g. \fB127.0.0.1:1080\fR) for routing unblocked egress traffic.
 .IP \(bu 2
+\fBTELEGRAM_ID\fR: Optional numeric Telegram user ID for automated bot identity resolution.
+.IP \(bu 2
+\fBVK_ID\fR: Optional numeric VK user ID for automated bot identity resolution.
+.IP \(bu 2
 \fBDEBUG\fR: Enable verbose diagnostic logging (\fBtrue\fR or \fBfalse\fR).
 .RE
 .TP
-\fBcookies.json\fR
-Session cookies exported from the desktop browser for the user's account.
+\fBcookies-$provider.json\fR, \fBcookies.json\fR
+Session cookies exported from the browser for the user's account (must be >15 bytes).
 .TP
 \fBroom.env\fR
 Environment file containing the active \fBCALL_LINK\fR. Managed automatically by the \fBrotate\fR command.
@@ -75,14 +89,14 @@ Environment file containing the active \fBCALL_LINK\fR. Managed automatically by
 \fI/usr/local/bin/whitelist-bypass\fR
 The main orchestrator executable.
 .TP
-\fI/etc/whitelist-bypass/users/\fR
-Directory containing user configuration subdirectories.
+\fI/run/whitelist-bypass/core.sock\fR
+Unix Domain Socket for local REST API and Core daemon communication.
 .TP
-\fI/opt/whitelist-bypass/bin/\fR
-Directory containing the headless creator binaries (\fBheadless-telemost-creator\fR, etc.).
+\fI/etc/systemd/system/whitelist-bypass-core.service\fR
+Core daemon systemd service unit.
 .TP
 \fI/etc/systemd/system/whitelist-bypass@.service\fR
-Template systemd service unit.
+Template systemd service unit for user tunnels.
 .SH EXAMPLES
 .B Create or rotate room for user 'danya':
 .RS

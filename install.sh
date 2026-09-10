@@ -79,6 +79,7 @@ fi
 # Configuration paths
 BIN_INSTALL_PATH="/usr/local/bin/whitelist-bypass"
 SYSTEMD_UNIT_PATH="/etc/systemd/system/whitelist-bypass@.service"
+CORE_UNIT_PATH="/etc/systemd/system/whitelist-bypass-core.service"
 SUDOERS_PATH="/etc/sudoers.d/whitelist-bypass"
 COMPLETION_PATH="/etc/bash_completion.d/whitelist-bypass"
 MAN_PATH="/usr/share/man/man1/whitelist-bypass.1"
@@ -125,15 +126,26 @@ done
 
 echo -e "${C_BOLD}=== Installing / Updating WhitelistBypass Wrapper ===${C_RESET}\n"
 
-# 0. Check and install optional dependencies (qrencode for terminal QR codes)
+# 0. Check and install dependencies (qrencode, python3, venv)
+NEEDED_PKGS=()
 if ! command -v qrencode >/dev/null 2>&1; then
-    log_info "Utility 'qrencode' not found. Installing for in-terminal QR code support..."
+    NEEDED_PKGS+=("qrencode")
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+    NEEDED_PKGS+=("python3")
+fi
+if ! python3 -m venv --help >/dev/null 2>&1; then
+    NEEDED_PKGS+=("python3-venv")
+fi
+
+if [[ ${#NEEDED_PKGS[@]} -gt 0 ]]; then
+    log_info "Missing system dependencies: ${NEEDED_PKGS[*]}. Installing..."
     if command -v apt-get >/dev/null 2>&1; then
         DEBIAN_FRONTEND=noninteractive apt-get update -qq && \
-        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode 2>/dev/null || \
-            log_warn "Failed to install qrencode automatically. Please install manually: apt install -y qrencode"
+        DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${NEEDED_PKGS[@]}" 2>/dev/null || \
+            log_warn "Failed to install some dependencies automatically. Please run: apt install -y ${NEEDED_PKGS[*]}"
     else
-        log_warn "Package manager apt-get not found. Please install 'qrencode' manually."
+        log_warn "Package manager apt-get not found. Please install manually: ${NEEDED_PKGS[*]}"
     fi
 fi
 
@@ -157,26 +169,50 @@ chown -R "$SERVICE_USER:$SERVICE_USER" "$OPT_DIR" "$CONF_DIR"
 chmod 700 "$CONF_DIR/users"
 log_ok "Directory structure prepared."
 
-# 3. Install or update CLI orchestrator
+# 3. Setup Python virtual environment and core package
+log_info "Setting up Python virtual environment in $OPT_DIR/venv..."
+if [[ ! -d "$OPT_DIR/venv" ]]; then
+    python3 -m venv "$OPT_DIR/venv"
+fi
+"$OPT_DIR/venv/bin/pip" install --quiet --upgrade pip
+if [[ -f "$SCRIPT_DIR/requirements.txt" ]]; then
+    log_info "Installing Python dependencies for Core daemon (FastAPI, Uvicorn, QR)..."
+    "$OPT_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
+fi
+
+log_info "Installing core Python package to $OPT_DIR/core..."
+rm -rf "$OPT_DIR/core"
+cp -r "$SCRIPT_DIR/core" "$OPT_DIR/core"
+chown -R "$SERVICE_USER:$SERVICE_USER" "$OPT_DIR"
+log_ok "Core Python package installed."
+
+# 4. Install or update CLI orchestrator
 log_info "Installing CLI orchestrator to $BIN_INSTALL_PATH..."
 cp "$SCRIPT_DIR/bin/whitelist-bypass" "$BIN_INSTALL_PATH"
 chmod +x "$BIN_INSTALL_PATH"
 log_ok "CLI orchestrator installed."
 
-# 4. Install systemd unit
-log_info "Installing systemd unit to $SYSTEMD_UNIT_PATH..."
+# 5. Install systemd units
+log_info "Installing systemd tunnel template unit to $SYSTEMD_UNIT_PATH..."
 cp "$SCRIPT_DIR/systemd/whitelist-bypass@.service" "$SYSTEMD_UNIT_PATH"
 chmod 644 "$SYSTEMD_UNIT_PATH"
-systemctl daemon-reload
-log_ok "Systemd service updated and reloaded."
 
-# 5. Install sudoers rule
+log_info "Installing systemd core service unit to $CORE_UNIT_PATH..."
+cp "$SCRIPT_DIR/systemd/whitelist-bypass-core.service" "$CORE_UNIT_PATH"
+chmod 644 "$CORE_UNIT_PATH"
+
+systemctl daemon-reload
+systemctl enable whitelist-bypass-core.service
+systemctl restart whitelist-bypass-core.service || true
+log_ok "Systemd services installed and reloaded."
+
+# 6. Install sudoers rule
 log_info "Installing sudoers rule to $SUDOERS_PATH..."
 cp "$SCRIPT_DIR/sudoers/whitelist-bypass" "$SUDOERS_PATH"
 chmod 0440 "$SUDOERS_PATH"
 log_ok "Sudoers rule configured."
 
-# 6. Install shell completions (Bash & Zsh)
+# 7. Install shell completions (Bash & Zsh)
 log_info "Installing Bash completions..."
 mkdir -p /etc/bash_completion.d
 cp "$SCRIPT_DIR/completions/bash/whitelist-bypass" "$COMPLETION_PATH"
@@ -198,7 +234,7 @@ if [[ -d /usr/share/zsh/site-functions ]]; then
 fi
 log_ok "Zsh completions installed."
 
-# 7. Install man page
+# 8. Install man page
 log_info "Installing man page to $MAN_PATH..."
 cp "$SCRIPT_DIR/man/whitelist-bypass.1" "$MAN_PATH"
 chmod 644 "$MAN_PATH"
@@ -207,7 +243,7 @@ if command -v mandb >/dev/null 2>&1; then
 fi
 log_ok "Man page installed."
 
-# 8. Check or build creator binaries
+# 9. Check or build creator binaries
 if [[ "$BUILD_CREATORS" == "true" ]]; then
     log_info "Building fresh core binaries from GitHub master..."
     "$SCRIPT_DIR/scripts/build-latest-creators.sh" "$OPT_DIR/bin"
@@ -229,7 +265,7 @@ else
     fi
 fi
 
-# 9. Restart existing active services on update
+# 10. Restart existing active services on update
 ACTIVE_UNITS=$(systemctl list-units --type=service --state=running "whitelist-bypass@*.service" --no-legend 2>/dev/null | awk '{print $1}' || true)
 if [[ -n "$ACTIVE_UNITS" ]]; then
     log_info "Restarting active tunnel services after update..."
@@ -242,8 +278,11 @@ fi
 echo -e "\n${C_BOLD}${C_GREEN}=== Installation / Update Completed Successfully! ===${C_RESET}\n"
 echo "Installed components:"
 echo "  • CLI utility:       $BIN_INSTALL_PATH"
-echo "  • Service template:  $SYSTEMD_UNIT_PATH"
+echo "  • Core Daemon:       $CORE_UNIT_PATH"
+echo "  • Tunnel template:   $SYSTEMD_UNIT_PATH"
 echo "  • Sudoers rule:      $SUDOERS_PATH"
+echo "  • Python package:    $OPT_DIR/core"
+echo "  • Virtualenv:        $OPT_DIR/venv"
 echo "  • Bash completion:   $COMPLETION_PATH"
 echo "  • Zsh completion:    /usr/local/share/zsh/site-functions/_whitelist-bypass"
 echo "  • Man manual:        $MAN_PATH (man whitelist-bypass)"

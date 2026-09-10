@@ -1,0 +1,32 @@
+[Unit]
+Description=WhitelistBypass Core Daemon and Local API Service
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=whitelist-bypass
+Group=whitelist-bypass
+WorkingDirectory=/opt/whitelist-bypass
+RuntimeDirectory=whitelist-bypass
+RuntimeDirectoryMode=0775
+
+# Launch FastAPI/Uvicorn core service over Unix Domain Socket
+Environment="PYTHONPATH=/opt/whitelist-bypass"
+ExecStart=/opt/whitelist-bypass/venv/bin/python3 -m core.app
+
+Restart=always
+RestartSec=3
+
+# Resource limits
+LimitNOFILE=65536
+
+# Filesystem and security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/whitelist-bypass /etc/whitelist-bypass
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

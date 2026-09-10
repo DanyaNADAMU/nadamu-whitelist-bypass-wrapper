@@ -21,18 +21,20 @@ _whitelist_bypass() {
         'link:Show active conference room link and status'
         'qr:Display terminal QR code and link'
         'rotate:Rotate conference room and persist new link'
+        'provider:Change WebRTC provider (telemost, vk, wbstream, dion)'
         'set-provider:Change WebRTC provider (telemost, vk, wbstream, dion)'
         'list:List all configured users and service statuses'
         'start:Start tunnel service'
         'stop:Stop tunnel service'
         'restart:Restart tunnel service'
-        'status:Show systemd service status'
+        'status:Show systemd service status and user details'
         'is-active:Check if tunnel service is active'
         'run:Internal creator daemon launcher (systemd)'
         'help:Show help summary'
     )
 
     _arguments -C \
+        '--json[Output result in structured JSON]' \
         '1: :->command' \
         '*: :->argument'
 
@@ -44,11 +46,11 @@ _whitelist_bypass() {
             case $words[2] in
                 get-link|link|rotate)
                     local -a opts
-                    opts=('--qr:Display conference link as terminal QR code')
+                    opts=('--qr:Display conference link as terminal QR code' '--json:Output result in JSON')
                     _describe 'option' opts
                     _whitelist_bypass_users
                     ;;
-                set-provider)
+                provider|set-provider)
                     local -a providers
                     providers=(
                         'telemost:Yandex.Telemost'
@@ -56,6 +58,7 @@ _whitelist_bypass() {
                         'wbstream:WB Stream'
                         'dion:DION'
                         '--rotate:Automatically provision a new room and display QR code'
+                        '--json:Output in JSON'
                     )
                     _whitelist_bypass_users
                     _describe 'provider / option' providers

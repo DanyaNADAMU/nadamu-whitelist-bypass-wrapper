@@ -2,6 +2,8 @@
 # Place in: /etc/sudoers.d/whitelist-bypass (mode 0440)
 
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/local/bin/whitelist-bypass *
+
+# Tunnel instances control
 whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl start whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl stop whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl restart whitelist-bypass@*
@@ -14,3 +16,17 @@ whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl status whitelist-bypass@
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /bin/journalctl -u whitelist-bypass@*
 whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u whitelist-bypass@*
+
+# Core service control
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl start whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl stop whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl restart whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl status whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/systemctl is-active whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl start whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl status whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/systemctl is-active whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /bin/journalctl -u whitelist-bypass-core*
+whitelist-bypass ALL=(ALL) NOPASSWD: /usr/bin/journalctl -u whitelist-bypass-core*

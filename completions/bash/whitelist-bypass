@@ -13,8 +13,8 @@ _whitelist_bypass() {
         cword=$COMP_CWORD
     fi
 
-    local commands="get-link link qr rotate set-provider list start stop restart status is-active run help"
-    local user_commands="get-link link qr rotate set-provider start stop restart status is-active run"
+    local commands="get-link link qr rotate provider set-provider list start stop restart status is-active run help --json"
+    local user_commands="get-link link qr rotate provider set-provider start stop restart status is-active run"
 
     # Complete main command
     if [[ $cword -eq 1 ]]; then
@@ -35,13 +35,13 @@ _whitelist_bypass() {
 
         case "$cmd" in
             get-link|link|rotate)
-                COMPREPLY=($(compgen -W "$user_list --qr" -- "$cur"))
+                COMPREPLY=($(compgen -W "$user_list --qr --json" -- "$cur"))
                 ;;
-            set-provider)
+            provider|set-provider)
                 if [[ $cword -eq 2 ]]; then
                     COMPREPLY=($(compgen -W "$user_list" -- "$cur"))
                 elif [[ $cword -ge 3 ]]; then
-                    COMPREPLY=($(compgen -W "telemost vk wbstream dion --rotate" -- "$cur"))
+                    COMPREPLY=($(compgen -W "telemost vk wbstream dion --rotate --json" -- "$cur"))
                 fi
                 ;;
             *)
