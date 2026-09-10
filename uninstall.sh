@@ -60,7 +60,7 @@ if [[ -n "$RUNNING_UNITS" ]]; then
     done
 fi
 
-for daemon in whitelist-bypass-telegram-bot.service whitelist-bypass-core.service; do
+for daemon in whitelist-bypass-telegram-bot.service whitelist-bypass-vk-bot.service whitelist-bypass-core.service; do
     if systemctl is-active "$daemon" >/dev/null 2>&1 || systemctl is-enabled "$daemon" >/dev/null 2>&1; then
         log_info "Stopping and disabling $daemon..."
         systemctl stop "$daemon" 2>/dev/null || true
@@ -78,6 +78,7 @@ log_ok "Removed /usr/local/bin/whitelist-bypass"
 rm -f /etc/systemd/system/whitelist-bypass@.service
 rm -f /etc/systemd/system/whitelist-bypass-core.service
 rm -f /etc/systemd/system/whitelist-bypass-telegram-bot.service
+rm -f /etc/systemd/system/whitelist-bypass-vk-bot.service
 systemctl daemon-reload
 log_ok "Removed systemd service units"
 

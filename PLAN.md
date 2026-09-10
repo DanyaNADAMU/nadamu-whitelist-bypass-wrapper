@@ -187,11 +187,14 @@
   - [x] Inline-клавиатуры для моментальной ротации и выбора провайдера в один клик.
   - [x] Отправка QR-кода готовой картинкой (`send_photo`).
   - [x] Служба systemd `whitelist-bypass-telegram-bot.service` с конфигурацией в `/etc/whitelist-bypass/telegram-bot.env`.
-- [ ] VK Бот (`bot/vk/`):
-  - [ ] VK LongPoll API (работает даже при жестких белых списках на смартфоне).
-  - [ ] Разрешение пользователя по `VK_ID`.
-  - [ ] Команды: `/link`, `/qr`, `/rotate`, `/provider`, `/status`, `/help`.
-  - [ ] Inline-клавиатура для ротации и переключения провайдера в один клик.
+- [x] VK Бот (`bot/vk/`):
+  - [x] VK Bots LongPoll API (v5.199) на aiohttp без избыточных зависимостей.
+  - [x] Разрешение пользователя по `VK_ID` из `user.conf`.
+  - [x] Панель администратора (`VK_ADMIN_IDS`) с расширенными командами управления.
+  - [x] Команды: `/link`, `/qr`, `/rotate`, `/provider`, `/status`, `/restart`, `/start_service`, `/stop_service`, `/list`, `/help`.
+  - [x] Inline-клавиатуры для моментальной ротации и выбора провайдера.
+  - [x] Загрузка QR-кода на сервера VK через multipart upload (`photos.saveMessagesPhoto`).
+  - [x] Служба systemd `whitelist-bypass-vk-bot.service` с конфигурацией в `/etc/whitelist-bypass/vk-bot.env`.
 
 ### Этап 4. Веб-интерфейс (Next.js Dashboard)
 - [ ] Панель управления на Next.js (App Router):

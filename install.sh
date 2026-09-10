@@ -81,6 +81,7 @@ BIN_INSTALL_PATH="/usr/local/bin/whitelist-bypass"
 SYSTEMD_UNIT_PATH="/etc/systemd/system/whitelist-bypass@.service"
 CORE_UNIT_PATH="/etc/systemd/system/whitelist-bypass-core.service"
 TG_UNIT_PATH="/etc/systemd/system/whitelist-bypass-telegram-bot.service"
+VK_UNIT_PATH="/etc/systemd/system/whitelist-bypass-vk-bot.service"
 SUDOERS_PATH="/etc/sudoers.d/whitelist-bypass"
 COMPLETION_PATH="/etc/bash_completion.d/whitelist-bypass"
 MAN_PATH="/usr/share/man/man1/whitelist-bypass.1"
@@ -194,6 +195,11 @@ if [[ -f "$SCRIPT_DIR/examples/telegram-bot.env.example" && ! -f "$CONF_DIR/tele
     chmod 644 "$CONF_DIR/telegram-bot.env.example"
 fi
 
+if [[ -f "$SCRIPT_DIR/examples/vk-bot.env.example" && ! -f "$CONF_DIR/vk-bot.env.example" ]]; then
+    cp "$SCRIPT_DIR/examples/vk-bot.env.example" "$CONF_DIR/vk-bot.env.example"
+    chmod 644 "$CONF_DIR/vk-bot.env.example"
+fi
+
 chown -R "$SERVICE_USER:$SERVICE_USER" "$OPT_DIR"
 log_ok "Python packages installed."
 
@@ -216,6 +222,10 @@ log_info "Installing systemd telegram bot service unit to $TG_UNIT_PATH..."
 cp "$SCRIPT_DIR/systemd/whitelist-bypass-telegram-bot.service" "$TG_UNIT_PATH"
 chmod 644 "$TG_UNIT_PATH"
 
+log_info "Installing systemd VK bot service unit to $VK_UNIT_PATH..."
+cp "$SCRIPT_DIR/systemd/whitelist-bypass-vk-bot.service" "$VK_UNIT_PATH"
+chmod 644 "$VK_UNIT_PATH"
+
 systemctl daemon-reload
 systemctl enable whitelist-bypass-core.service
 systemctl restart whitelist-bypass-core.service || true
@@ -227,6 +237,15 @@ if [[ -f "$TG_ENV_FILE" ]] && grep -qE '^TELEGRAM_BOT_TOKEN="?[0-9]+:[A-Za-z0-9_
     systemctl enable whitelist-bypass-telegram-bot.service
     systemctl restart whitelist-bypass-telegram-bot.service || true
     log_ok "Telegram bot service started."
+fi
+
+# Check if VK bot is configured
+VK_ENV_FILE="$CONF_DIR/vk-bot.env"
+if [[ -f "$VK_ENV_FILE" ]] && grep -qE '^VK_GROUP_TOKEN="?[A-Za-z0-9_.-]+' "$VK_ENV_FILE"; then
+    log_info "Active VK bot configuration detected. Enabling and starting VK bot service..."
+    systemctl enable whitelist-bypass-vk-bot.service
+    systemctl restart whitelist-bypass-vk-bot.service || true
+    log_ok "VK bot service started."
 fi
 log_ok "Systemd services installed and reloaded."
 
@@ -304,6 +323,7 @@ echo "Installed components:"
 echo "  • CLI utility:       $BIN_INSTALL_PATH"
 echo "  • Core Daemon:       $CORE_UNIT_PATH"
 echo "  • Telegram Bot:      $TG_UNIT_PATH"
+echo "  • VK Bot:            $VK_UNIT_PATH"
 echo "  • Tunnel template:   $SYSTEMD_UNIT_PATH"
 echo "  • Sudoers rule:      $SUDOERS_PATH"
 echo "  • Python packages:   $OPT_DIR/core, $OPT_DIR/bot"
@@ -318,6 +338,11 @@ echo "Telegram Bot activation:"
 echo "  1. Copy config: sudo cp $CONF_DIR/telegram-bot.env.example $CONF_DIR/telegram-bot.env"
 echo "  2. Fill token:  sudo nano $CONF_DIR/telegram-bot.env"
 echo "  3. Start bot:   sudo systemctl enable --now whitelist-bypass-telegram-bot"
+echo ""
+echo "VK Bot activation:"
+echo "  1. Copy config: sudo cp $CONF_DIR/vk-bot.env.example $CONF_DIR/vk-bot.env"
+echo "  2. Fill token:  sudo nano $CONF_DIR/vk-bot.env"
+echo "  3. Start bot:   sudo systemctl enable --now whitelist-bypass-vk-bot"
 echo ""
 echo "Quick status check:"
 echo "  whitelist-bypass list"

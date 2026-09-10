@@ -1,0 +1,29 @@
+[Unit]
+Description=WhitelistBypass VK Bot Dispatcher
+After=network.target network-online.target whitelist-bypass-core.service
+Wants=network-online.target
+Requires=whitelist-bypass-core.service
+
+[Service]
+Type=simple
+User=whitelist-bypass
+Group=whitelist-bypass
+WorkingDirectory=/opt/whitelist-bypass
+
+Environment="PYTHONPATH=/opt/whitelist-bypass"
+EnvironmentFile=-/etc/whitelist-bypass/vk-bot.env
+
+ExecStart=/opt/whitelist-bypass/venv/bin/python3 -m bot.vk.main
+
+Restart=always
+RestartSec=5
+
+# Filesystem and security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/run/whitelist-bypass
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
